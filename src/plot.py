@@ -38,7 +38,7 @@ def plot(summoner_name: str):
         elif y_values:
             y_values.append(y_values[-1])
 
-    x_values = list(range(len(y_values)))
+    x_values = list(range(len(y_values) - 1, -1, -1))  # invert x axis
     x_dates = [
         datetime.datetime.fromtimestamp(item["startedAt"], LOCAL_TIMEZONE)
         for item in data["items"][::-1]  # type: ignore
@@ -55,6 +55,7 @@ def plot(summoner_name: str):
     ax.yaxis.set_major_formatter(
         FuncFormatter(lambda y, pos: value_to_rank(y, pos, data["thresholds"]))  # type: ignore
     )
+    ax.invert_xaxis()
 
     crosshair = cursor.Cursor(
         ax,
@@ -65,4 +66,8 @@ def plot(summoner_name: str):
         ),
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
+
+    plt.title(f"Rank history - [{summoner_name}]")
+    plt.xlabel("Games ago")
+    plt.ylabel("Rank")
     plt.show()

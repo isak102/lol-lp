@@ -59,14 +59,21 @@ class Cursor:
                 self.ax.figure.canvas.blit(self.ax.bbox)
         else:
             x, y = event.xdata, event.ydata
-            index = min(np.searchsorted(self.x, x), len(self.x) - 1)
+            # Since the x-axis is inverted, we need to invert the search.
+            # Find the closest index to the inverted x position.
+            inverted_index = (
+                len(self.x) - np.searchsorted(self.x[::-1], x, side="left") - 1
+            )
+            index = np.clip(inverted_index, 0, len(self.x) - 1)
             if index != self._last_index:
                 self._last_index = index
                 x = self.x[index]
                 y = self.y[index]
                 self.horizontal_line.set_ydata([y])
                 self.vertical_line.set_xdata([x])
-                self.text.set_text(f"{self.get_date_str(x)}: [{self.y_converter(y)}]")
+                # Use the correct date string for the inverted index.
+                date_str = self.get_date_str(index)
+                self.text.set_text(f"{date_str}: [{self.y_converter(y)}]")
                 self.set_cross_hair_visible(True)
                 self.ax.figure.canvas.restore_region(self.background)
                 self.ax.draw_artist(self.horizontal_line)
