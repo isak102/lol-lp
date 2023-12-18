@@ -9,11 +9,12 @@ class Cursor:
     Credit to ChatGPT.
     """
 
-    def __init__(self, ax, line, dates):
+    def __init__(self, ax, line, dates, y_converter):
         self.ax = ax
         self.line = line
         self.x, self.y = line.get_data()
         self.dates = dates
+        self.y_converter = y_converter
         self._last_index = None
         self.background = None
         self.horizontal_line = ax.axhline(color="k", lw=0.8, ls="--")
@@ -65,7 +66,7 @@ class Cursor:
                 y = self.y[index]
                 self.horizontal_line.set_ydata([y])
                 self.vertical_line.set_xdata([x])
-                self.text.set_text(f"x={self.get_date_str(x)}, y={y:1.2f}")
+                self.text.set_text(f"{self.get_date_str(x)}: [{self.y_converter(y)}]")
                 self.set_cross_hair_visible(True)
                 self.ax.figure.canvas.restore_region(self.background)
                 self.ax.draw_artist(self.horizontal_line)
