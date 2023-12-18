@@ -64,7 +64,7 @@ def color_rank_intervals(thresholds: dict, min_y, max_y):
         if is_lowest(tier):
             lower_bound = min(min_y, lower_bound)
 
-        plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.8)
+        plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.6)
 
 
 def value_to_rank(
@@ -103,6 +103,7 @@ def value_to_rank(
 
 def plot(summoner_name: str):
     data = api.get(summoner_name)
+    print(f"Plotting {summoner_name}...")
 
     y_values = []
     for item in data["items"][::-1]:  # type: ignore
@@ -118,9 +119,6 @@ def plot(summoner_name: str):
         datetime.datetime.fromtimestamp(item["startedAt"], LOCAL_TIMEZONE)
         for item in data["items"][::-1]  # type: ignore
     ]
-
-    print(x_values)
-    print(y_values)
 
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black")
@@ -148,7 +146,6 @@ def plot(summoner_name: str):
         for value in range(min(y_values), max(y_values))
         if value % TICK_LP_INTERVAL == 0
     ]
-    print(minor_ticks)
 
     ax.yaxis.set_ticks(minor_ticks, minor=True)  # Set minor ticks
     ax.yaxis.set_ticks(major_ticks)  # type: ignore
