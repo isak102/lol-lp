@@ -90,11 +90,7 @@ def value_to_rank(
             lp = y - tier["minValue"] + tier["minLP"]
             if is_apex(tier["tier"]) and minor_tick:
                 return f"{int(lp)} LP"
-            lp_str = (
-                f" {int(lp)} LP"
-                if show_lp or (is_apex(tier["tier"]) and lp != 0)
-                else ""
-            )
+            lp_str = f" {int(lp)} LP" if show_lp else ""
             if short:
                 return f"{tier['tier'][0]}{roman_to_int(tier['division'])}{lp_str}"
             else:
