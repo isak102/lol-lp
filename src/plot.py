@@ -7,6 +7,25 @@ from matplotlib.ticker import FuncFormatter
 LOCAL_TIMEZONE = pytz.timezone("Europe/Stockholm")
 
 
+def get_major_ticks(y_values: list, thresholds: dict) -> list:
+    MASTER_VALUE = 2800
+    ticks = [  # get all ticks up to master
+        f
+        for f in range(min(y_values), min(max(y_values), MASTER_VALUE) + 1)
+        if f % 400 == 0
+    ]
+
+    TIERS = ["GRANDMASTER", "CHALLENGER"]
+    for tier in TIERS:  # get ticks for grandmaster and challenger
+        tick = next(
+            (item["minValue"] for item in thresholds if item["tier"] == tier), None
+        )
+        if tick is not None:
+            ticks.append(tick)
+
+    return ticks
+
+
 def color_ranks(thresholds: dict):
     """
     Colors the graph with each rank's color
@@ -35,22 +54,34 @@ def color_ranks(thresholds: dict):
         plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.8)
 
 
-def value_to_rank(y, _, thresholds: dict, short=False) -> str:
+def value_to_rank(
+    y, _, thresholds: dict, short=False, show_lp=False, minor_tick=False
+) -> str:
     """
     Translates a value to a rank string. Set short=True to output a short string
     """
+
+    def is_apex(tier: str) -> bool:
+        return tier in ["MASTER", "GRANDMASTER", "CHALLENGER"]
+
+    def is_highest(tier: str) -> bool:
+        return tier == max(thresholds, key=lambda x: x["maxValue"])["tier"]
 
     def roman_to_int(s: str) -> int:
         return {"IV": 4, "III": 3, "II": 2, "I": 1}[s]
 
     for tier in thresholds:
-        if y >= tier["minValue"] and (
-            y <= tier["maxValue"]
-            and y - tier["minValue"]
-            != 100  # this check is needed to not include E1 100LP for example
+        if y >= tier["minValue"] and y < (
+            tier["maxValue"] + (1 if is_highest(tier["tier"]) else 0)
         ):
             lp = y - tier["minValue"] + tier["minLP"]
-            lp_str = f" {int(lp)} LP" if short else ""
+            if is_apex(tier["tier"]) and minor_tick:
+                return f"{int(lp)} LP"
+            lp_str = (
+                f" {int(lp)} LP"
+                if show_lp or (is_apex(tier["tier"]) and lp != 0)
+                else ""
+            )
             if short:
                 return f"{tier['tier'][0]}{roman_to_int(tier['division'])}{lp_str}"
             else:
@@ -82,25 +113,44 @@ def plot(summoner_name: str):
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black")
 
-    offset = 50  # offset amount of lp
+    offset = 10  # offset amount of lp
     ax.set_ylim(min(y_values) - offset, max(y_values) + offset)
     ax.yaxis.set_major_formatter(
         FuncFormatter(lambda y, pos: value_to_rank(y, pos, data["thresholds"]))  # type: ignore
     )
+    ax.yaxis.set_minor_formatter(
+        FuncFormatter(
+            lambda y, pos: value_to_rank(y, pos, data["thresholds"], minor_tick=True),  # type: ignore
+        )
+    )
     ax.invert_xaxis()
+
+    TICK_LP_INTERVAL = 200
+    major_ticks = get_major_ticks(y_values, data["thresholds"])  # type: ignore
+    minor_ticks = [
+        value
+        for value in range(min(y_values), max(y_values))
+        if value % TICK_LP_INTERVAL == 0
+    ]
+    print(minor_ticks)
+
+    ax.yaxis.set_ticks(minor_ticks, minor=True)  # Set minor ticks
+    ax.yaxis.set_ticks(major_ticks)  # type: ignore
+
+    plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
+    plt.grid(which="minor", linestyle="-", linewidth="0.35", color="black")
 
     crosshair = cursor.Cursor(
         ax,
         line,
         x_dates,
         lambda y: value_to_rank(
-            y, None, data["thresholds"], short=True  # type: ignore
+            y, None, data["thresholds"], short=True, show_lp=True  # type: ignore
         ),
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
     color_ranks(data["thresholds"])  # type: ignore
-
     plt.title(f"Rank history - [{summoner_name}]")
     plt.xlabel("Games ago")
     plt.ylabel("Rank")
