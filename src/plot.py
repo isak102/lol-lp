@@ -83,6 +83,9 @@ def value_to_rank(
     def roman_to_int(s: str) -> int:
         return {"IV": 4, "III": 3, "II": 2, "I": 1}[s]
 
+    def short_tier(tier: str) -> str:
+        return tier[0] if tier != "GRANDMASTER" else "GM"
+
     for tier in thresholds:
         if y >= tier["minValue"] and y < (
             tier["maxValue"] + (1 if is_highest(tier["tier"]) else 0)
@@ -92,7 +95,7 @@ def value_to_rank(
                 return f"{int(lp)} LP"
             lp_str = f" {int(lp)} LP" if show_lp else ""
             if short:
-                return f"{tier['tier'][0]}{roman_to_int(tier['division'])}{lp_str}"
+                return f"{short_tier(tier['tier'])}{roman_to_int(tier['division'])}{lp_str}"
             else:
                 return f"{tier['tier']} {tier['division']}{lp_str}"
     return ""
