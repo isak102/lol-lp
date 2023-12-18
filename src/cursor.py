@@ -19,7 +19,17 @@ class Cursor:
         self.background = None
         self.horizontal_line = ax.axhline(color="k", lw=0.8, ls="--")
         self.vertical_line = ax.axvline(color="k", lw=0.8, ls="--")
-        self.text = ax.text(0.1, 0.9, "", transform=ax.transAxes)
+        props = dict(boxstyle="round", facecolor="grey", alpha=0.5)
+        self.text = ax.text(
+            0.0125,
+            0.975,
+            "",
+            transform=ax.transAxes,
+            bbox=props,
+            fontsize=14,
+            verticalalignment="top",
+            horizontalalignment="left",
+        )
         self._creating_background = False
         ax.figure.canvas.mpl_connect("draw_event", self.on_draw)
 
@@ -45,8 +55,7 @@ class Cursor:
 
     def get_date_str(self, index):
         date = self.dates[index]
-        # tranform date to local timezone like nov 13
-        return date.strftime("%b %d")
+        return date.strftime("%a %b %d")
 
     def on_mouse_move(self, event):
         if self.background is None:
@@ -73,7 +82,7 @@ class Cursor:
                 self.vertical_line.set_xdata([x])
                 # Use the correct date string for the inverted index.
                 date_str = self.get_date_str(index)
-                self.text.set_text(f"{date_str}: [{self.y_converter(y)}]")
+                self.text.set_text(f"({date_str}): [{self.y_converter(y)}]")
                 self.set_cross_hair_visible(True)
                 self.ax.figure.canvas.restore_region(self.background)
                 self.ax.draw_artist(self.horizontal_line)
