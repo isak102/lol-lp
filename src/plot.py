@@ -125,6 +125,7 @@ def plot(summoner_name: str):
 
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black")
+    fig.patch.set_facecolor("#343541")
 
     Y_AXIS_PADDING = 10
     y_axis_min = min(y_values) - Y_AXIS_PADDING
@@ -152,6 +153,7 @@ def plot(summoner_name: str):
 
     ax.yaxis.set_ticks(minor_ticks, minor=True)  # Set minor ticks
     ax.yaxis.set_ticks(major_ticks)  # type: ignore
+    ax.tick_params(which="both", color="white", labelcolor="white", length=0, width=0)
 
     plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
     plt.grid(which="minor", linestyle="-", linewidth="0.35", color="black")
@@ -167,7 +169,7 @@ def plot(summoner_name: str):
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
     color_ranks(data["thresholds"], y_axis_min, y_axis_max)  # type: ignore
-    plt.title(f"Rank history - [{summoner_name}]")
-    plt.xlabel("Games ago")
-    plt.ylabel("Rank")
+    plt.title(f"Rank history - [{summoner_name}]", color="white")
+    plt.xlabel("Games ago", color="white")
+    plt.ylabel("Rank", color="white")
     plt.show()

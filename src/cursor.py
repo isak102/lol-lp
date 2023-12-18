@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -19,11 +18,12 @@ class Cursor:
         self.background = None
         self.horizontal_line = ax.axhline(color="k", lw=0.8, ls="--")
         self.vertical_line = ax.axvline(color="k", lw=0.8, ls="--")
-        props = dict(boxstyle="round", facecolor="grey", alpha=0.5)
+        props = dict(boxstyle="round", facecolor="black", alpha=0.5)
         self.text = ax.text(
             0.0125,
             0.975,
             "",
+            color="white",
             transform=ax.transAxes,
             bbox=props,
             fontsize=14,
