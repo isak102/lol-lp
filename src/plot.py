@@ -26,10 +26,17 @@ def get_major_ticks(y_values: list, thresholds: dict) -> list:
     return ticks
 
 
-def color_ranks(thresholds: dict):
+def color_ranks(thresholds: dict, min_y, max_y):
     """
     Colors the graph with each rank's color
     """
+
+    def is_highest(tier: str) -> bool:
+        return tier == max(thresholds, key=lambda x: x["maxValue"])["tier"]
+
+    def is_lowest(tier: str) -> bool:
+        return tier == min(thresholds, key=lambda x: x["minValue"])["tier"]
+
     RANK_COLORS = {
         "IRON": "#b5a58b",
         "BRONZE": "#8c523a",
@@ -51,6 +58,12 @@ def color_ranks(thresholds: dict):
         lower_bound = min(
             item["minValue"] for item in thresholds if item["tier"] == tier
         )
+
+        if is_highest(tier):
+            upper_bound = max(max_y, upper_bound)
+        if is_lowest(tier):
+            lower_bound = min(min_y, lower_bound)
+
         plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.8)
 
 
@@ -113,8 +126,11 @@ def plot(summoner_name: str):
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black")
 
-    offset = 10  # offset amount of lp
-    ax.set_ylim(min(y_values) - offset, max(y_values) + offset)
+    Y_AXIS_PADDING = 10
+    y_axis_min = min(y_values) - Y_AXIS_PADDING
+    y_axis_max = max(y_values) + Y_AXIS_PADDING
+
+    ax.set_ylim(y_axis_min, y_axis_max)
     ax.yaxis.set_major_formatter(
         FuncFormatter(lambda y, pos: value_to_rank(y, pos, data["thresholds"]))  # type: ignore
     )
@@ -150,7 +166,7 @@ def plot(summoner_name: str):
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
-    color_ranks(data["thresholds"])  # type: ignore
+    color_ranks(data["thresholds"], y_axis_min, y_axis_max)  # type: ignore
     plt.title(f"Rank history - [{summoner_name}]")
     plt.xlabel("Games ago")
     plt.ylabel("Rank")
