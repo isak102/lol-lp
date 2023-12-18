@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 class Cursor:
     """
     A cross-hair cursor that snaps to the data point of a line, which is
@@ -8,15 +9,16 @@ class Cursor:
     Credit to ChatGPT.
     """
 
-    def __init__(self, ax, line):
+    def __init__(self, ax, line, dates):
         self.ax = ax
         self.line = line
         self.x, self.y = line.get_data()
+        self.dates = dates
         self._last_index = None
         self.background = None
         self.horizontal_line = ax.axhline(color="k", lw=0.8, ls="--")
         self.vertical_line = ax.axvline(color="k", lw=0.8, ls="--")
-        self.text = ax.text(0.9, 0.9, "", transform=ax.transAxes)
+        self.text = ax.text(0.1, 0.9, "", transform=ax.transAxes)
         self._creating_background = False
         ax.figure.canvas.mpl_connect("draw_event", self.on_draw)
 
@@ -40,6 +42,11 @@ class Cursor:
         self.set_cross_hair_visible(True)
         self._creating_background = False
 
+    def get_date_str(self, index):
+        date = self.dates[index]
+        # tranform date to local timezone like nov 13
+        return date.strftime("%b %d")
+
     def on_mouse_move(self, event):
         if self.background is None:
             self.create_new_background()
@@ -58,7 +65,7 @@ class Cursor:
                 y = self.y[index]
                 self.horizontal_line.set_ydata([y])
                 self.vertical_line.set_xdata([x])
-                self.text.set_text(f"x={x:1.2f}, y={y:1.2f}")
+                self.text.set_text(f"x={self.get_date_str(x)}, y={y:1.2f}")
                 self.set_cross_hair_visible(True)
                 self.ax.figure.canvas.restore_region(self.background)
                 self.ax.draw_artist(self.horizontal_line)
