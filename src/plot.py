@@ -92,7 +92,9 @@ def value_to_rank(
             tier["maxValue"]
             + (1 if is_highest(tier["tier"]) and is_apex(tier["tier"]) else 0)
         ):
-            lp = y - tier["minValue"] + tier["minLP"]
+            lp = (
+                y - tier["minValue"] + tier["minLP"]
+            )  # FIXME: this causes issue with master+ and LP cutoffs
             if is_apex(tier["tier"]) and minor_tick:
                 return f"{int(lp)} LP"
             lp_str = f" {int(lp)} LP" if show_lp else ""
@@ -103,6 +105,7 @@ def value_to_rank(
     return ""
 
 
+# FIXME: this casuses issue with master+ and LP cutoffs
 def merge_thresholds(dicts) -> list:
     merged = []
     for lst in dicts:
@@ -120,6 +123,49 @@ def merge_thresholds(dicts) -> list:
                 to_add.append(threshold)
         merged.extend(to_add)
     return merged
+
+
+def insert_patch_lines(points: list, ax, min_distance=4) -> list:
+    """
+    Finds the indices of the points where a new patch is introduced and inserts
+    a vertical line at that point with a text label, only if they are not too close together.
+
+    Labels are only added to the leftmost line if lines are closer than min_distance to each other.
+
+    :param points: List of point dictionaries with a 'patch' key.
+    :param ax: The axis object of the plot.
+    :param min_distance: The minimum distance allowed between text labels.
+    :return: List of tuples with the index and patch value where lines are inserted.
+    """
+    patch_lines = [
+        (len(points) - (i + 1), points[i]["patch"])
+        for i in range(1, len(points))
+        if points[i]["patch"] != points[i - 1]["patch"]
+    ]
+
+    for i, (x_pos, patch) in enumerate(patch_lines):
+        plt.axvline(
+            x_pos,
+            color="black",
+            linestyle=":",
+            linewidth=0.3,
+        )
+
+        # Check if this is the last patch line or if the next patch line is further away than min_distance
+        if (i == len(patch_lines) - 1) or (
+            (x_pos) - (patch_lines[i + 1][0] + 1) >= min_distance
+        ):
+            # Add text at the vertical line
+            plt.text(
+                x_pos - 0.05,  # Slight offset in x-direction for clarity
+                ax.get_ylim()[1],  # Set y position at the top of the plot
+                patch,  # The text label
+                rotation=90,  # Vertical text
+                verticalalignment="top",  # Align text to the top of plot
+                fontsize=8,
+            )
+
+    return patch_lines
 
 
 def plot(summoner_name: str):
@@ -189,6 +235,8 @@ def plot(summoner_name: str):
     ax.yaxis.set_ticks(minor_ticks, minor=True)  # Set minor ticks
     ax.yaxis.set_ticks(major_ticks)  # type: ignore
     ax.tick_params(which="both", color="white", labelcolor="white", length=0, width=0)
+
+    insert_patch_lines(points, ax)
 
     plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
     plt.grid(which="minor", linestyle="-", linewidth="0.35", color="black")
