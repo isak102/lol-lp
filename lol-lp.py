@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import src.plot as plot
+import sys
 
-# https://www.op.gg/summoners/euw/
-plot.plot("Jude Βellingham#euw")
+# Summoner name should be first argument
+summoner_name = sys.argv[1]
+
+plot.plot(summoner_name)
