@@ -146,6 +146,8 @@ def plot(summoner_name: str):
                 item["startedAt"], LOCAL_TIMEZONE
             )
 
+            point["patch"] = item["patch"]
+
             points.append(point)
 
     # Fill in the x values, starting from the end and going down to 0

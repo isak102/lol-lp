@@ -57,6 +57,13 @@ class Cursor:
         date = self.points[index]["date"]
         return date.strftime("%a %b %d")
 
+    def set_info_text(self, index):
+        date_str = self.get_date_str(index)
+        patch = self.points[index]["patch"]
+        self.text.set_text(
+            f"({date_str}): [{self.y_converter(self.y[index])}]\nPatch: {patch}"
+        )
+
     def on_mouse_move(self, event):
         if self.background is None:
             self.create_new_background()
@@ -81,8 +88,7 @@ class Cursor:
                 self.horizontal_line.set_ydata([y])
                 self.vertical_line.set_xdata([x])
                 # Use the correct date string for the inverted index.
-                date_str = self.get_date_str(index)
-                self.text.set_text(f"({date_str}): [{self.y_converter(y)}]")
+                self.set_info_text(index)
                 self.set_cross_hair_visible(True)
                 self.ax.figure.canvas.restore_region(self.background)
                 self.ax.draw_artist(self.horizontal_line)
