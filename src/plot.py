@@ -89,7 +89,8 @@ def value_to_rank(
 
     for tier in thresholds:
         if y >= tier["minValue"] and y < (
-            tier["maxValue"] + (1 if is_highest(tier["tier"]) else 0)
+            tier["maxValue"]
+            + (1 if is_highest(tier["tier"]) and is_apex(tier["tier"]) else 0)
         ):
             lp = y - tier["minValue"] + tier["minLP"]
             if is_apex(tier["tier"]) and minor_tick:
