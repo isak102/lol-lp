@@ -1,7 +1,13 @@
-import requests
+import aiohttp
+import asyncio
+from sys import maxsize
+
+__all__ = ["get_lphistory"]
 
 
-def get(summoner_name: str, region: str = "EUW") -> dict | None:
+async def async_get(
+    session, summoner_name: str, region="EUW", page_index=1
+) -> dict | None:
     headers = {
         "authority": "mobalytics.gg",
         "accept": "*/*",
@@ -23,6 +29,7 @@ def get(summoner_name: str, region: str = "EUW") -> dict | None:
         "operationName": "LolProfilePageLpGainsQuery",
         "variables": {
             "cLpPerPage": 150,
+            "cLpPageIndex": page_index,
             "summonerName": summoner_name,
             "region": region,
         },
@@ -35,16 +42,41 @@ def get(summoner_name: str, region: str = "EUW") -> dict | None:
     }
 
     try:
-        response = requests.post(
+        print(f"Fetching page {page_index} for {summoner_name}...")
+        async with session.post(
             "https://mobalytics.gg/api/lol/graphql/v1/query",
             headers=headers,
             json=json_data,
-        )
-        if response.status_code == 200:
-            res = response.json()["data"]["lol"]["player"]["lpHistory"]
-            return res
-        else:
-            response.raise_for_status()
+        ) as response:
+            if response.status == 200:
+                res = await response.json()
+                return res["data"]["lol"]["player"]["lpHistory"]
+            else:
+                response.raise_for_status()
     except Exception as e:
-        print(f"Error: {e}")
-        exit(1)
+        print(f"Error fetching page {page_index}: {e}")
+
+
+async def get_lphistory(
+    summoner_name, region="EUW", page_limit: int | None = None
+) -> list:
+    async with aiohttp.ClientSession() as session:
+        # First, fetch the first page to determine the total number of pages
+        first_page = await async_get(session, summoner_name, region, 1)
+        total_pages = first_page["pageInfo"]["totalPages"]  # type: ignore
+        print(f"Total pages: {total_pages}")
+
+        if page_limit is None or page_limit > 1:
+            total_pages = min(total_pages, page_limit or maxsize)
+            # Create tasks for all remaining pages
+            tasks = [
+                async_get(session, summoner_name, region, i)
+                for i in range(2, total_pages + 1)
+            ]
+
+            # Gather all pages concurrently
+            pages = [first_page] + await asyncio.gather(*tasks)
+        else:
+            pages = [first_page]
+
+        return pages

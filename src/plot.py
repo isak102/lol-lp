@@ -2,6 +2,7 @@ import src.mobalytics_query as api
 import src.cursor as cursor
 import matplotlib.pyplot as plt
 import datetime, pytz
+import asyncio
 from matplotlib.ticker import FuncFormatter
 
 LOCAL_TIMEZONE = pytz.timezone("Europe/Stockholm")
@@ -101,24 +102,47 @@ def value_to_rank(
     return ""
 
 
+def merge_thresholds(dicts) -> list:
+    merged = []
+    for lst in dicts:
+        to_add = []
+        for threshold in lst:
+            predicate = (
+                lambda x: x["tier"] == threshold["tier"]
+                and x["division"] == threshold["division"]
+            )
+            matching = next((item for item in merged if predicate(item)), None)
+            if matching is not None:
+                matching["minValue"] = min(matching["minValue"], threshold["minValue"])
+                matching["maxValue"] = max(matching["maxValue"], threshold["maxValue"])
+            else:
+                to_add.append(threshold)
+        merged.extend(to_add)
+    return merged
+
+
 def plot(summoner_name: str):
-    data = api.get(summoner_name)
     print(f"Plotting {summoner_name}...")
+    pages = asyncio.run(api.get_lphistory(summoner_name))
 
+    # TODO: make this into a single list where each item is a dict with x, y, and date, patch, etc
     y_values = []
-    for item in data["items"][::-1]:  # type: ignore
-        # If the value is not None, use it
-        if item["lp"]["after"] is not None:
-            y_values.append(item["lp"]["after"]["value"])
-        # If the value is None, use the previous value (if there is a previous value)
-        elif y_values:
-            y_values.append(y_values[-1])
+    x_dates = []
+    for page in reversed(pages):
+        for item in reversed(page["items"]):  # type: ignore
+            # If the value is not None, use it
+            if item["lp"]["after"] is not None:
+                y_values.append(item["lp"]["after"]["value"])
+            # If the value is None, use the previous value (if there is a previous value)
+            elif y_values:
+                y_values.append(y_values[-1])
 
-    x_values = list(range(len(y_values) - 1, -1, -1))  # invert x axis
-    x_dates = [
-        datetime.datetime.fromtimestamp(item["startedAt"], LOCAL_TIMEZONE)
-        for item in data["items"][::-1]  # type: ignore
-    ]
+            x_dates.append(
+                datetime.datetime.fromtimestamp(item["startedAt"], LOCAL_TIMEZONE)
+            )
+    x_values = list(range(len(y_values), 0, -1))
+
+    thresholds = merge_thresholds([page["thresholds"] for page in pages])
 
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black")
@@ -130,17 +154,17 @@ def plot(summoner_name: str):
 
     ax.set_ylim(y_axis_min, y_axis_max)
     ax.yaxis.set_major_formatter(
-        FuncFormatter(lambda y, pos: value_to_rank(y, pos, data["thresholds"]))  # type: ignore
+        FuncFormatter(lambda y, pos: value_to_rank(y, pos, thresholds))  # type: ignore
     )
     ax.yaxis.set_minor_formatter(
         FuncFormatter(
-            lambda y, pos: value_to_rank(y, pos, data["thresholds"], minor_tick=True),  # type: ignore
+            lambda y, pos: value_to_rank(y, pos, thresholds, minor_tick=True),  # type: ignore
         )
     )
     ax.invert_xaxis()
 
     TICK_LP_INTERVAL = 200
-    major_ticks = get_major_ticks(y_values, data["thresholds"])  # type: ignore
+    major_ticks = get_major_ticks(y_values, thresholds)  # type: ignore
     minor_ticks = [
         value
         for value in range(min(y_values), max(y_values))
@@ -159,12 +183,12 @@ def plot(summoner_name: str):
         line,
         x_dates,
         lambda y: value_to_rank(
-            y, None, data["thresholds"], short=True, show_lp=True  # type: ignore
+            y, None, thresholds, short=True, show_lp=True  # type: ignore
         ),
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
-    color_rank_intervals(data["thresholds"], y_axis_min, y_axis_max)  # type: ignore
+    color_rank_intervals(thresholds, y_axis_min, y_axis_max)  # type: ignore
     plt.title(f"Rank history - [{summoner_name}]", color="white")
     plt.xlabel("Games ago", color="white")
     plt.ylabel("Rank", color="white")
