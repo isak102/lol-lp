@@ -3,13 +3,14 @@ import src.cursor as cursor
 import matplotlib.pyplot as plt
 import datetime, pytz
 import asyncio
+from sys import maxsize
 from matplotlib.ticker import FuncFormatter
 
 LOCAL_TIMEZONE = pytz.timezone("Europe/Stockholm")
+MASTER_VALUE = 2800  # the value of 0LP master
 
 
 def get_major_ticks(y_values: list, thresholds: dict) -> list:
-    MASTER_VALUE = 2800
     ticks = [  # get all ticks up to master
         f
         for f in range(min(y_values), min(max(y_values), MASTER_VALUE) + 1)
@@ -45,7 +46,7 @@ def color_rank_intervals(thresholds: dict, min_y, max_y):
         "GOLD": "#f0b753",
         "PLATINUM": "#4a927c",
         "EMERALD": "#48c750",
-        "DIAMOND": "#716bf6",  # TODO: find a better color?
+        "DIAMOND": "#716bf6",
         "MASTER": "#ed5eba",
         "GRANDMASTER": "#ce4039",
         "CHALLENGER": "#40c0de",
@@ -68,15 +69,16 @@ def color_rank_intervals(thresholds: dict, min_y, max_y):
         plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.6)
 
 
+def is_apex(tier: str) -> bool:
+    return tier in ["MASTER", "GRANDMASTER", "CHALLENGER"]
+
+
 def value_to_rank(
     y, _, thresholds: dict, short=False, show_lp=False, minor_tick=False
 ) -> str:
     """
     Translates a value to a rank string. Set short=True to output a short string
     """
-
-    def is_apex(tier: str) -> bool:
-        return tier in ["MASTER", "GRANDMASTER", "CHALLENGER"]
 
     def is_highest(tier: str) -> bool:
         return tier == max(thresholds, key=lambda x: x["maxValue"])["tier"]
@@ -92,12 +94,12 @@ def value_to_rank(
             tier["maxValue"]
             + (1 if is_highest(tier["tier"]) and is_apex(tier["tier"]) else 0)
         ):
-            lp = (
-                y - tier["minValue"] + tier["minLP"]
-            )  # FIXME: this causes issue with master+ and LP cutoffs
+            lp = y - tier["minValue"] if not is_apex(tier["tier"]) else y - MASTER_VALUE
             if is_apex(tier["tier"]) and minor_tick:
                 return f"{int(lp)} LP"
             lp_str = f" {int(lp)} LP" if show_lp else ""
+            if tier["tier"] == "MASTER" and lp == 100:
+                print(y, tier["minValue"], tier["maxValue"])
             if short:
                 return f"{short_tier(tier['tier'])}{roman_to_int(tier['division'])}{lp_str}"
             else:
@@ -105,8 +107,28 @@ def value_to_rank(
     return ""
 
 
-# FIXME: this casuses issue with master+ and LP cutoffs
 def merge_thresholds(dicts) -> list:
+    def adjust_apex_thresholds(thresholds: list):
+        master = next((item for item in thresholds if item["tier"] == "MASTER"), None)
+        grandmaster = next(
+            (item for item in thresholds if item["tier"] == "GRANDMASTER"), None
+        )
+        challenger = next(
+            (item for item in thresholds if item["tier"] == "CHALLENGER"), None
+        )
+
+        if master and grandmaster:
+            lp_cutoff = int((master["maxLP"] + grandmaster["minLP"]) / 2)
+            value = MASTER_VALUE + lp_cutoff
+            master["maxValue"] = value
+            grandmaster["minValue"] = value
+
+        if grandmaster and challenger:
+            lp_cutoff = int((grandmaster["maxLP"] + challenger["minLP"]) / 2)
+            value = MASTER_VALUE + lp_cutoff
+            grandmaster["maxValue"] = value
+            challenger["minValue"] = value
+
     merged = []
     for lst in dicts:
         to_add = []
@@ -117,11 +139,19 @@ def merge_thresholds(dicts) -> list:
             )
             matching = next((item for item in merged if predicate(item)), None)
             if matching is not None:
+                if is_apex(threshold["tier"]):
+                    # Dont merge apex thresholds, only keep the latest one
+                    continue
                 matching["minValue"] = min(matching["minValue"], threshold["minValue"])
                 matching["maxValue"] = max(matching["maxValue"], threshold["maxValue"])
             else:
                 to_add.append(threshold)
         merged.extend(to_add)
+    adjust_apex_thresholds(merged)
+
+    highest = max(merged, key=lambda x: x["maxValue"])
+    highest["maxValue"] = maxsize
+
     return merged
 
 
@@ -168,33 +198,54 @@ def insert_patch_lines(points: list, ax, min_distance=4) -> list:
     return patch_lines
 
 
-def plot(summoner_name: str):
-    pages = asyncio.run(api.get_lphistory(summoner_name, page_limit=None))
+def extract_points(pages: list) -> list[dict]:
+    def get_y(item):
+        if item["lp"]["after"] is not None:
+            value = item["lp"]["after"]["value"]
+            lp = item["lp"]["after"]["lp"]
+        elif item["lp"]["before"] is not None:
+            value = item["lp"]["before"]["value"]
+            lp = item["lp"]["before"]["lp"]
+        else:
+            # If there was no lp before and after then the game was a placement game
+            return None
 
-    # Get all points from all pages
+        if value > MASTER_VALUE:
+            y = MASTER_VALUE + lp
+        elif (
+            value == MASTER_VALUE and lp == 100
+        ):  # FIXME:  This is a hack to avoid D1 promos appearing as master 0LP
+            y = MASTER_VALUE - 1
+        else:
+            y = value
+
+        return y
+
     points = []
-    print("Getting points...")
     for page in reversed(pages):
         for item in reversed(page["items"]):  # type: ignore
-            point = {}
-
-            # If the value is not None, use it
-            if item["lp"]["after"] is not None:
-                point["y"] = item["lp"]["after"]["value"]
-            # If the value is None, use the previous value (if there is a previous value)
-            elif item["lp"]["before"] is not None:
-                point["y"] = item["lp"]["before"]["value"]
-            else:
-                # If there was no lp before and after then the game was a placement game
+            y_value = get_y(item)
+            if y_value is None:
                 continue
 
-            point["date"] = datetime.datetime.fromtimestamp(
-                item["startedAt"], LOCAL_TIMEZONE
-            )
-
-            point["patch"] = item["patch"]
-
+            point = {
+                "y": y_value,
+                "date": datetime.datetime.fromtimestamp(
+                    item["startedAt"], LOCAL_TIMEZONE
+                ),
+                "patch": item["patch"],
+            }
             points.append(point)
+
+    return points
+
+
+def plot(summoner_name: str):
+    pages = asyncio.run(api.get_lphistory(summoner_name))
+
+    # Get all points from all pages
+    print("Extracting points...")
+    points = extract_points(pages)
 
     # Fill in the x values, starting from the end and going down to 0
     print("Filling in x values...")
