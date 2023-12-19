@@ -126,24 +126,36 @@ def plot(summoner_name: str):
     print(f"Plotting {summoner_name}...")
     pages = asyncio.run(api.get_lphistory(summoner_name))
 
-    # TODO: make this into a single list where each item is a dict with x, y, and date, patch, etc
-    y_values = []
-    x_dates = []
+    # Get all points from all pages
+    points = []
     for page in reversed(pages):
         for item in reversed(page["items"]):  # type: ignore
+            point = {}
+
             # If the value is not None, use it
             if item["lp"]["after"] is not None:
-                y_values.append(item["lp"]["after"]["value"])
+                point["y"] = item["lp"]["after"]["value"]
             # If the value is None, use the previous value (if there is a previous value)
-            elif y_values:
-                y_values.append(y_values[-1])
+            elif item["lp"]["before"] is not None:
+                point["y"] = item["lp"]["before"]["value"]
+            else:
+                # If there was no lp before and after then the game was a placement game
+                continue
 
-            x_dates.append(
-                datetime.datetime.fromtimestamp(item["startedAt"], LOCAL_TIMEZONE)
+            point["date"] = datetime.datetime.fromtimestamp(
+                item["startedAt"], LOCAL_TIMEZONE
             )
-    x_values = list(range(len(y_values), 0, -1))
+
+            points.append(point)
+
+    # Fill in the x values, starting from the end and going down to 0
+    for i, point in enumerate(reversed(points)):
+        point["x"] = i
 
     thresholds = merge_thresholds([page["thresholds"] for page in pages])
+
+    x_values = [point["x"] for point in points]
+    y_values = [point["y"] for point in points]
 
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black")
@@ -182,7 +194,7 @@ def plot(summoner_name: str):
     crosshair = cursor.Cursor(
         ax,
         line,
-        x_dates,
+        points,
         lambda y: value_to_rank(
             y, None, thresholds, short=True, show_lp=True  # type: ignore
         ),

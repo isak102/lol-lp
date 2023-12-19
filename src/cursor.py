@@ -8,11 +8,11 @@ class Cursor:
     Credit to ChatGPT.
     """
 
-    def __init__(self, ax, line, dates, y_converter):
+    def __init__(self, ax, line, points, y_converter):
         self.ax = ax
         self.line = line
         self.x, self.y = line.get_data()
-        self.dates = dates
+        self.points = points
         self.y_converter = y_converter
         self._last_index = None
         self.background = None
@@ -54,7 +54,7 @@ class Cursor:
         self._creating_background = False
 
     def get_date_str(self, index):
-        date = self.dates[index]
+        date = self.points[index]["date"]
         return date.strftime("%a %b %d")
 
     def on_mouse_move(self, event):
