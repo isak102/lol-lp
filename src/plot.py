@@ -128,6 +128,7 @@ def merge_thresholds(dicts) -> list:
             value = MASTER_VALUE + lp_cutoff
             grandmaster["maxValue"] = value
             challenger["minValue"] = value
+            challenger["maxValue"] = maxsize
 
     merged = []
     for lst in dicts:
@@ -149,7 +150,7 @@ def merge_thresholds(dicts) -> list:
         merged.extend(to_add)
     adjust_apex_thresholds(merged)
 
-    highest = max(merged, key=lambda x: x["maxValue"])
+    highest = max(merged[::-1], key=lambda x: (x["maxValue"]))
     highest["maxValue"] = maxsize
 
     return merged
@@ -212,15 +213,18 @@ def extract_points(pages: list) -> list[dict]:
 
         if value > MASTER_VALUE:
             y = MASTER_VALUE + lp
-        elif (
-            value == MASTER_VALUE and lp == 100
-        ):  # FIXME:  This is a hack to avoid D1 promos appearing as master 0LP
-            y = MASTER_VALUE - 1
+        elif value == MASTER_VALUE:
+            if lp == 100:
+                # FIXME: This is a hack to avoid D1 promos appearing as master 0LP. maybe introduces bugs?
+                y = MASTER_VALUE - 1
+            else:
+                y = MASTER_VALUE + lp
         else:
             y = value
 
         return y
 
+    count = 0
     points = []
     for page in reversed(pages):
         for item in reversed(page["items"]):  # type: ignore
@@ -236,6 +240,7 @@ def extract_points(pages: list) -> list[dict]:
                 "patch": item["patch"],
             }
             points.append(point)
+            count += 1
 
     return points
 
@@ -259,7 +264,7 @@ def plot(summoner_name: str):
     y_values = [point["y"] for point in points]
 
     fig, ax = plt.subplots()
-    (line,) = ax.plot(x_values, y_values, color="black")
+    (line,) = ax.plot(x_values, y_values, color="black", linewidth=0.7)
     fig.patch.set_facecolor("#343541")
 
     Y_AXIS_PADDING = 10
