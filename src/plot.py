@@ -169,11 +169,11 @@ def insert_patch_lines(points: list, ax, min_distance=4) -> list:
 
 
 def plot(summoner_name: str):
-    print(f"Plotting {summoner_name}...")
-    pages = asyncio.run(api.get_lphistory(summoner_name))
+    pages = asyncio.run(api.get_lphistory(summoner_name, page_limit=None))
 
     # Get all points from all pages
     points = []
+    print("Getting points...")
     for page in reversed(pages):
         for item in reversed(page["items"]):  # type: ignore
             point = {}
@@ -197,9 +197,11 @@ def plot(summoner_name: str):
             points.append(point)
 
     # Fill in the x values, starting from the end and going down to 0
+    print("Filling in x values...")
     for i, point in enumerate(reversed(points)):
         point["x"] = i
 
+    print("Merging thresholds...")
     thresholds = merge_thresholds([page["thresholds"] for page in pages])
 
     x_values = [point["x"] for point in points]
@@ -225,6 +227,7 @@ def plot(summoner_name: str):
     ax.invert_xaxis()
 
     TICK_LP_INTERVAL = 200
+    print("Setting ticks...")
     major_ticks = get_major_ticks(y_values, thresholds)  # type: ignore
     minor_ticks = [
         value
@@ -236,6 +239,7 @@ def plot(summoner_name: str):
     ax.yaxis.set_ticks(major_ticks)  # type: ignore
     ax.tick_params(which="both", color="white", labelcolor="white", length=0, width=0)
 
+    print("Inserting patch lines...")
     insert_patch_lines(points, ax)
 
     plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
@@ -251,7 +255,9 @@ def plot(summoner_name: str):
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
+    print("Coloring rank intervals...")
     color_rank_intervals(thresholds, y_axis_min, y_axis_max)  # type: ignore
+
     plt.title(f"Rank history - [{summoner_name}]", color="white")
     plt.xlabel("Games ago", color="white")
     plt.ylabel("Rank", color="white")
