@@ -98,8 +98,6 @@ def value_to_rank(
             if is_apex(tier["tier"]) and minor_tick:
                 return f"{int(lp)} LP"
             lp_str = f" {int(lp)} LP" if show_lp else ""
-            if tier["tier"] == "MASTER" and lp == 100:
-                print(y, tier["minValue"], tier["maxValue"])
             if short:
                 return f"{short_tier(tier['tier'])}{roman_to_int(tier['division'])}{lp_str}"
             else:
@@ -314,7 +312,17 @@ def plot(summoner_name: str):
     print("Coloring rank intervals...")
     color_rank_intervals(thresholds, y_axis_min, y_axis_max)  # type: ignore
 
-    plt.title(f"Rank history - [{summoner_name}]", color="white")
+    peak = max(points, key=lambda x: x["y"])
+
+    title = "Rank history - [{}]\nPeak: {} at {} patch {} ({} games ago)".format(
+        summoner_name,
+        value_to_rank(peak["y"], None, thresholds, short=True, show_lp=True),  # type: ignore
+        peak["date"].strftime("%b %d"),
+        peak["patch"],
+        peak["x"],
+    )
+
+    plt.title(title, color="white")
     plt.xlabel("Games ago", color="white")
     plt.ylabel("Rank", color="white")
     plt.show()
