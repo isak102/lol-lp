@@ -58,25 +58,30 @@ async def async_get(
 
 
 async def get_lphistory(
-    summoner_name, region="EUW", page_limit: int | None = None
-) -> list:
+    summoner_name, region="EUW", page_limit=None, batch_size=4
+) -> list[dict]:
+    """
+    Asynchronously fetches a player's League of Legends LP (League Points) history from the Mobalytics API,
+    using batched requests to manage load.
+
+    This function first fetches the first page to determine the total number of pages available. It then
+    fetches the remaining pages in batches to avoid overwhelming the server and the network.
+    """
     async with aiohttp.ClientSession() as session:
-        # First, fetch the first page to determine the total number of pages
         first_page = await async_get(session, summoner_name, region, 1)
         total_pages = first_page["pageInfo"]["totalPages"]  # type: ignore
         print(f"Total pages: {total_pages}")
 
-        if page_limit is None or page_limit > 1:
-            total_pages = min(total_pages, page_limit or maxsize)
-            # Create tasks for all remaining pages
+        if page_limit is not None:
+            total_pages = min(total_pages, page_limit)
+
+        all_pages = [first_page]
+        for i in range(2, total_pages + 1, batch_size):
+            end = min(i + batch_size, total_pages + 1)
             tasks = [
-                async_get(session, summoner_name, region, i)
-                for i in range(2, total_pages + 1)
+                async_get(session, summoner_name, region, j) for j in range(i, end)
             ]
+            batch_results = await asyncio.gather(*tasks)
+            all_pages.extend(batch_results)
 
-            # Gather all pages concurrently
-            pages = [first_page] + await asyncio.gather(*tasks)
-        else:
-            pages = [first_page]
-
-        return pages
+        return all_pages
