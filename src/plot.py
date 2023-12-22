@@ -1,16 +1,14 @@
-import src.mobalytics_query as api
 import src.cursor as cursor
 import matplotlib.pyplot as plt
-import datetime, pytz
-import asyncio
-from sys import maxsize
 from matplotlib.ticker import FuncFormatter
+import datetime
 
-LOCAL_TIMEZONE = pytz.timezone("Europe/Stockholm")
-MASTER_VALUE = 2800  # the value of 0LP master
+import src.data_processing as data
+
+from src.config import LOCAL_TIMEZONE, MASTER_VALUE, RANK_COLORS
 
 
-def get_major_ticks(y_values: list, thresholds: dict) -> list:
+def get_major_ticks(y_values: list, thresholds: list[dict]) -> list:
     ticks = [  # get all ticks up to master
         f
         for f in range(min(y_values), min(max(y_values), MASTER_VALUE) + 1)
@@ -28,7 +26,7 @@ def get_major_ticks(y_values: list, thresholds: dict) -> list:
     return ticks
 
 
-def color_rank_intervals(thresholds: dict, min_y, max_y):
+def color_rank_intervals(thresholds: list[dict], min_y, max_y):
     """
     Colors the graph with each rank's color
     """
@@ -38,19 +36,6 @@ def color_rank_intervals(thresholds: dict, min_y, max_y):
 
     def is_lowest(tier: str) -> bool:
         return tier == min(thresholds, key=lambda x: x["minValue"])["tier"]
-
-    RANK_COLORS = {
-        "IRON": "#b5a58b",
-        "BRONZE": "#8c523a",
-        "SILVER": "#84969b",
-        "GOLD": "#f0b753",
-        "PLATINUM": "#4a927c",
-        "EMERALD": "#48c750",
-        "DIAMOND": "#716bf6",
-        "MASTER": "#ed5eba",
-        "GRANDMASTER": "#ce4039",
-        "CHALLENGER": "#40c0de",
-    }
 
     unique_tiers = {item["tier"] for item in thresholds}
     for tier in unique_tiers:
@@ -67,91 +52,6 @@ def color_rank_intervals(thresholds: dict, min_y, max_y):
             lower_bound = min(min_y, lower_bound)
 
         plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.6)
-
-
-def is_apex(tier: str) -> bool:
-    return tier in ["MASTER", "GRANDMASTER", "CHALLENGER"]
-
-
-def value_to_rank(
-    y, _, thresholds: dict, short=False, show_lp=False, minor_tick=False
-) -> str:
-    """
-    Translates a value to a rank string. Set short=True to output a short string
-    """
-
-    def is_highest(tier: str) -> bool:
-        return tier == max(thresholds, key=lambda x: x["maxValue"])["tier"]
-
-    def roman_to_int(s: str) -> int:
-        return {"IV": 4, "III": 3, "II": 2, "I": 1}[s]
-
-    def short_tier(tier: str) -> str:
-        return tier[0] if tier != "GRANDMASTER" else "GM"
-
-    for tier in thresholds:
-        if y >= tier["minValue"] and y < (
-            tier["maxValue"]
-            + (1 if is_highest(tier["tier"]) and is_apex(tier["tier"]) else 0)
-        ):
-            lp = y - tier["minValue"] if not is_apex(tier["tier"]) else y - MASTER_VALUE
-            if is_apex(tier["tier"]) and minor_tick:
-                return f"{int(lp)} LP"
-            lp_str = f" {int(lp)} LP" if show_lp else ""
-            if short:
-                return f"{short_tier(tier['tier'])}{roman_to_int(tier['division'])}{lp_str}"
-            else:
-                return f"{tier['tier']} {tier['division']}{lp_str}"
-    return ""
-
-
-def merge_thresholds(dicts) -> list:
-    def adjust_apex_thresholds(thresholds: list):
-        master = next((item for item in thresholds if item["tier"] == "MASTER"), None)
-        grandmaster = next(
-            (item for item in thresholds if item["tier"] == "GRANDMASTER"), None
-        )
-        challenger = next(
-            (item for item in thresholds if item["tier"] == "CHALLENGER"), None
-        )
-
-        if master and grandmaster:
-            lp_cutoff = int((master["maxLP"] + grandmaster["minLP"]) / 2)
-            value = MASTER_VALUE + lp_cutoff
-            master["maxValue"] = value
-            grandmaster["minValue"] = value
-
-        if grandmaster and challenger:
-            lp_cutoff = int((grandmaster["maxLP"] + challenger["minLP"]) / 2)
-            value = MASTER_VALUE + lp_cutoff
-            grandmaster["maxValue"] = value
-            challenger["minValue"] = value
-            challenger["maxValue"] = maxsize
-
-    merged = []
-    for lst in dicts:
-        to_add = []
-        for threshold in lst:
-            predicate = (
-                lambda x: x["tier"] == threshold["tier"]
-                and x["division"] == threshold["division"]
-            )
-            matching = next((item for item in merged if predicate(item)), None)
-            if matching is not None:
-                if is_apex(threshold["tier"]):
-                    # Dont merge apex thresholds, only keep the latest one
-                    continue
-                matching["minValue"] = min(matching["minValue"], threshold["minValue"])
-                matching["maxValue"] = max(matching["maxValue"], threshold["maxValue"])
-            else:
-                to_add.append(threshold)
-        merged.extend(to_add)
-    adjust_apex_thresholds(merged)
-
-    highest = max(merged[::-1], key=lambda x: (x["maxValue"]))
-    highest["maxValue"] = maxsize
-
-    return merged
 
 
 def insert_patch_lines(points: list, ax, min_distance=4) -> list:
@@ -225,7 +125,7 @@ def extract_points(pages: list) -> list[dict]:
     count = 0
     points = []
     for page in reversed(pages):
-        for item in reversed(page["items"]):  # type: ignore
+        for item in reversed(page["items"]):
             y_value = get_y(item)
             if y_value is None:
                 continue
@@ -243,9 +143,7 @@ def extract_points(pages: list) -> list[dict]:
     return points
 
 
-def plot(summoner_name: str):
-    pages = asyncio.run(api.get_lphistory(summoner_name))
-
+def plot(summoner_name: str, pages: list[dict]):
     # Get all points from all pages
     print("Extracting points...")
     points = extract_points(pages)
@@ -256,7 +154,7 @@ def plot(summoner_name: str):
         point["x"] = i
 
     print("Merging thresholds...")
-    thresholds = merge_thresholds([page["thresholds"] for page in pages])
+    thresholds = data.merge_thresholds([page["thresholds"] for page in pages])
 
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]
@@ -271,18 +169,18 @@ def plot(summoner_name: str):
 
     ax.set_ylim(y_axis_min, y_axis_max)
     ax.yaxis.set_major_formatter(
-        FuncFormatter(lambda y, pos: value_to_rank(y, pos, thresholds))  # type: ignore
+        FuncFormatter(lambda y, pos: data.value_to_rank(y, pos, thresholds))
     )
     ax.yaxis.set_minor_formatter(
         FuncFormatter(
-            lambda y, pos: value_to_rank(y, pos, thresholds, minor_tick=True),  # type: ignore
+            lambda y, pos: data.value_to_rank(y, pos, thresholds, minor_tick=True),
         )
     )
     ax.invert_xaxis()
 
     TICK_LP_INTERVAL = 200
     print("Setting ticks...")
-    major_ticks = get_major_ticks(y_values, thresholds)  # type: ignore
+    major_ticks = get_major_ticks(y_values, thresholds)
     minor_ticks = [
         value
         for value in range(min(y_values), max(y_values))
@@ -290,7 +188,7 @@ def plot(summoner_name: str):
     ]
 
     ax.yaxis.set_ticks(minor_ticks, minor=True)  # Set minor ticks
-    ax.yaxis.set_ticks(major_ticks)  # type: ignore
+    ax.yaxis.set_ticks(major_ticks)
     ax.tick_params(which="both", color="white", labelcolor="white", length=0, width=0)
 
     print("Inserting patch lines...")
@@ -303,20 +201,18 @@ def plot(summoner_name: str):
         ax,
         line,
         points,
-        lambda y: value_to_rank(
-            y, None, thresholds, short=True, show_lp=True  # type: ignore
-        ),
+        lambda y: data.value_to_rank(y, None, thresholds, short=True, show_lp=True),
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
     print("Coloring rank intervals...")
-    color_rank_intervals(thresholds, y_axis_min, y_axis_max)  # type: ignore
+    color_rank_intervals(thresholds, y_axis_min, y_axis_max)
 
     peak = max(points, key=lambda x: x["y"])
 
     title = "Rank history - [{}]\nPeak: {} at {} patch {} ({} games ago)".format(
         summoner_name,
-        value_to_rank(peak["y"], None, thresholds, short=True, show_lp=True),  # type: ignore
+        data.value_to_rank(peak["y"], None, thresholds, short=True, show_lp=True),
         peak["date"].strftime("%b %d"),
         peak["patch"],
         peak["x"],

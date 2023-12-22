@@ -1,6 +1,5 @@
 import aiohttp
 import asyncio
-from sys import maxsize
 
 __all__ = ["get_lphistory"]
 
@@ -59,7 +58,7 @@ async def async_get(
 
 async def get_lphistory(
     summoner_name, region="EUW", page_limit=None, batch_size=4
-) -> list[dict]:
+) -> list[dict | None]:
     """
     Asynchronously fetches a player's League of Legends LP (League Points) history from the Mobalytics API,
     using batched requests to manage load.
