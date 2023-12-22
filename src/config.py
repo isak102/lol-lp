@@ -1,3 +1,5 @@
+import os
+
 import pytz
 
 LOCAL_TIMEZONE = pytz.timezone("Europe/Stockholm")
@@ -14,3 +16,11 @@ RANK_COLORS = {
     "GRANDMASTER": "#ce4039",
     "CHALLENGER": "#40c0de",
 }
+BOOKMARKS_FILE = os.path.join(
+    os.environ.get("HOME") or exit("$HOME env variable not set"),
+    ".config",
+    "BraveSoftware",
+    "Brave-Browser",
+    "Default",
+    "Bookmarks",
+)
