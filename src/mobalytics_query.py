@@ -1,12 +1,26 @@
 import aiohttp
 import asyncio
+import logging
 
 __all__ = ["get_lphistory"]
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class APIError(Exception):
+    """Custom exception for API-related errors."""
+
+    pass
 
 
 async def async_get_page(
     session, summoner_name: str, region, page_index
 ) -> dict | None:
+    """
+    Asynchronously fetches a page of a player's League Points (LP) history from Mobalytics.
+    """
     headers = {
         "authority": "mobalytics.gg",
         "accept": "*/*",
@@ -41,46 +55,73 @@ async def async_get_page(
     }
 
     try:
-        print(f"Fetching page {page_index} for {summoner_name}...")
+        logger.info(f"Fetching page {page_index} for {summoner_name}...")
         async with session.post(
             "https://mobalytics.gg/api/lol/graphql/v1/query",
             headers=headers,
             json=json_data,
         ) as response:
-            if response.status == 200:
-                res = await response.json()
-                return res["data"]["lol"]["player"]["lpHistory"]
-            else:
+            if response.status != 200:
+                content = await response.text()
+                logger.error(f"Non-200 HTTP status code: {response.status}")
+                logger.error(f"Response content: {content}")
                 response.raise_for_status()
+
+            res = await response.json()
+            if "errors" in res:
+                raise APIError(f"{res['errors']}")
+            return res["data"]["lol"]["player"]["lpHistory"]
+
+    except aiohttp.ClientError as e:
+        logger.error(f"Client error fetching page {page_index}: {e}")
+    except asyncio.TimeoutError as e:
+        logger.error(f"Timeout error fetching page {page_index}: {e}")
     except Exception as e:
-        print(f"Error fetching page {page_index}: {e}")
+        logger.error(f"Unexpected error fetching page {page_index}: {e}")
+
+    return None
 
 
 async def get_lphistory(
     summoner_name, region, page_limit=None, batch_size=4
-) -> list[dict | None]:
+) -> list[dict]:
     """
-    Asynchronously fetches a player's League of Legends LP (League Points) history from the Mobalytics API,
-    using batched requests to manage load.
-
-    This function first fetches the first page to determine the total number of pages available. It then
-    fetches the remaining pages in batches to avoid overwhelming the server and the network.
+    Asynchronously fetches a player's League of Legends LP history from the Mobalytics API,
+    using batched requests to manage load. Throws an exception if any page fails to fetch.
     """
     async with aiohttp.ClientSession() as session:
-        first_page = await async_get_page(session, summoner_name, region, page_index=1)
-        total_pages = first_page["pageInfo"]["totalPages"]  # type: ignore TODO: remove this ignore
-        print(f"Total pages: {total_pages}")
+        try:
+            first_page = await async_get_page(
+                session, summoner_name, region, page_index=1
+            )
+            if first_page is None:
+                raise Exception("Failed to fetch the first page.")
 
-        if page_limit is not None:
-            total_pages = min(total_pages, page_limit)
+            total_pages = first_page.get("pageInfo", {}).get("totalPages", 0)
+            logger.info(f"Total pages: {total_pages}")
 
-        all_pages = [first_page]
-        for i in range(2, total_pages + 1, batch_size):
-            end = min(i + batch_size, total_pages + 1)
-            tasks = [
-                async_get_page(session, summoner_name, region, j) for j in range(i, end)
-            ]
-            batch_results = await asyncio.gather(*tasks)
-            all_pages.extend(batch_results)
+            if page_limit is not None:
+                total_pages = min(total_pages, page_limit)
 
-        return all_pages
+            all_pages = [first_page]
+            for i in range(2, total_pages + 1, batch_size):
+                end = min(i + batch_size, total_pages + 1)
+                tasks = [
+                    async_get_page(session, summoner_name, region, j)
+                    for j in range(i, end)
+                ]
+
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for result in results:
+                    if isinstance(result, dict):
+                        all_pages.append(result)
+                    else:
+                        raise Exception(
+                            f"Error fetching a page in batch starting at {i}: {result}"
+                        )
+
+            return all_pages
+
+        except Exception as e:
+            logger.error(f"Error when fetching pages for: {summoner_name}: {e}")
+            raise

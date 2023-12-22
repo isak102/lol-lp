@@ -9,10 +9,10 @@ parser.add_argument("-i", "--riot-id", required=True, help="Riot ID of the playe
 parser.add_argument("-r", "--region", required=True, help="Region of the player")
 args = parser.parse_args()
 
-pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
-for page in pages:
-    if page is None:
-        print("Error fetching pages")
-        exit(1)
+try:
+    pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
+except Exception as e:
+    print(f"Error fetching pages: {e}")
+    exit(1)
 
-plot.plot(args.riot_id, pages)  # type: ignore
+plot.plot(args.riot_id, pages)
