@@ -4,8 +4,8 @@ import asyncio
 __all__ = ["get_lphistory"]
 
 
-async def async_get(
-    session, summoner_name: str, region="EUW", page_index=1
+async def async_get_page(
+    session, summoner_name: str, region, page_index
 ) -> dict | None:
     headers = {
         "authority": "mobalytics.gg",
@@ -57,7 +57,7 @@ async def async_get(
 
 
 async def get_lphistory(
-    summoner_name, region="EUW", page_limit=None, batch_size=4
+    summoner_name, region, page_limit=None, batch_size=4
 ) -> list[dict | None]:
     """
     Asynchronously fetches a player's League of Legends LP (League Points) history from the Mobalytics API,
@@ -67,8 +67,8 @@ async def get_lphistory(
     fetches the remaining pages in batches to avoid overwhelming the server and the network.
     """
     async with aiohttp.ClientSession() as session:
-        first_page = await async_get(session, summoner_name, region, 1)
-        total_pages = first_page["pageInfo"]["totalPages"]  # type: ignore
+        first_page = await async_get_page(session, summoner_name, region, page_index=1)
+        total_pages = first_page["pageInfo"]["totalPages"]  # type: ignore TODO: remove this ignore
         print(f"Total pages: {total_pages}")
 
         if page_limit is not None:
@@ -78,7 +78,7 @@ async def get_lphistory(
         for i in range(2, total_pages + 1, batch_size):
             end = min(i + batch_size, total_pages + 1)
             tasks = [
-                async_get(session, summoner_name, region, j) for j in range(i, end)
+                async_get_page(session, summoner_name, region, j) for j in range(i, end)
             ]
             batch_results = await asyncio.gather(*tasks)
             all_pages.extend(batch_results)
