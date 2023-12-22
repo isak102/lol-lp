@@ -2,14 +2,17 @@
 import src.plot as plot
 import src.mobalytics_query as api
 import asyncio
-import sys
+import argparse
 
-# Summoner name should be first argument
-summoner_name = sys.argv[1]  # TODO: get region here
+parser = argparse.ArgumentParser(description="League of Legends LP history")
+parser.add_argument("-i", "--riot-id", required=True, help="Riot ID of the player")
+parser.add_argument("-r", "--region", required=True, help="Region of the player")
+args = parser.parse_args()
 
-pages = asyncio.run(api.get_lphistory(summoner_name, region="EUW"))
+pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
 for page in pages:
     if page is None:
         print("Error fetching pages")
-        sys.exit(1)
-plot.plot(summoner_name, pages)  # type: ignore
+        exit(1)
+
+plot.plot(args.riot_id, pages)  # type: ignore
