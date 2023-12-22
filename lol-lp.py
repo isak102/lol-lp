@@ -3,6 +3,10 @@ import src.plot as plot
 import src.mobalytics_query as api
 import asyncio
 import argparse
+import logging
+
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s]: %(message)s")
+
 
 parser = argparse.ArgumentParser(description="League of Legends LP history")
 parser.add_argument("-i", "--riot-id", required=True, help="Riot ID of the player")

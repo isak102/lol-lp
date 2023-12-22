@@ -1,11 +1,12 @@
+import logging
 import src.cursor as cursor
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import datetime
-
 import src.data_processing as data
-
 from src.config import LOCAL_TIMEZONE, MASTER_VALUE, RANK_COLORS
+
+logger = logging.getLogger(__name__)
 
 
 def get_major_ticks(y_values: list, thresholds: list[dict]) -> list:
@@ -122,7 +123,6 @@ def extract_points(pages: list) -> list[dict]:
 
         return y
 
-    count = 0
     points = []
     for page in reversed(pages):
         for item in reversed(page["items"]):
@@ -138,22 +138,19 @@ def extract_points(pages: list) -> list[dict]:
                 "patch": item["patch"],
             }
             points.append(point)
-            count += 1
 
     return points
 
 
 def plot(summoner_name: str, pages: list[dict]):
-    # Get all points from all pages
-    print("Extracting points...")
+    logger.info("Extracting points...")
     points = extract_points(pages)
 
-    # Fill in the x values, starting from the end and going down to 0
-    print("Filling in x values...")
+    logger.info("Filling in x values...")
     for i, point in enumerate(reversed(points)):
         point["x"] = i
 
-    print("Merging thresholds...")
+    logger.info("Merging thresholds...")
     thresholds = data.merge_thresholds([page["thresholds"] for page in pages])
 
     x_values = [point["x"] for point in points]
@@ -179,7 +176,7 @@ def plot(summoner_name: str, pages: list[dict]):
     ax.invert_xaxis()
 
     TICK_LP_INTERVAL = 200
-    print("Setting ticks...")
+    logger.info("Setting ticks...")
     major_ticks = get_major_ticks(y_values, thresholds)
     minor_ticks = [
         value
@@ -191,7 +188,7 @@ def plot(summoner_name: str, pages: list[dict]):
     ax.yaxis.set_ticks(major_ticks)
     ax.tick_params(which="both", color="white", labelcolor="white", length=0, width=0)
 
-    print("Inserting patch lines...")
+    logger.info("Inserting patch lines...")
     insert_patch_lines(points, ax)
 
     plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
@@ -205,7 +202,7 @@ def plot(summoner_name: str, pages: list[dict]):
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
 
-    print("Coloring rank intervals...")
+    logger.info("Coloring rank intervals...")
     color_rank_intervals(thresholds, y_axis_min, y_axis_max)
 
     peak = max(points, key=lambda x: x["y"])

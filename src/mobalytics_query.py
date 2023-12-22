@@ -4,8 +4,6 @@ import logging
 
 __all__ = ["get_lphistory"]
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
