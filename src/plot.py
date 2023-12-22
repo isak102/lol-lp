@@ -1,8 +1,10 @@
+import datetime
 import logging
-import src.cursor as cursor
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
-import datetime
+
+import src.cursor as cursor
 import src.data_processing as data
 from src.config import LOCAL_TIMEZONE, MASTER_VALUE, RANK_COLORS
 

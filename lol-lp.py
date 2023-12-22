@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-import src.plot as plot
-import src.mobalytics_query as api
-import asyncio
 import argparse
+import asyncio
 import logging
+
+import src.mobalytics_query as api
+import src.plot as plot
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]: %(message)s")
 

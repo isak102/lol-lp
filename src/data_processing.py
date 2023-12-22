@@ -1,6 +1,7 @@
-from src.config import MASTER_VALUE
-import src.util as util
 from sys import maxsize
+
+import src.util as util
+from src.config import MASTER_VALUE
 
 
 def merge_thresholds(dicts) -> list[dict]:
