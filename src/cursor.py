@@ -8,11 +8,12 @@ class Cursor:
     Credit to ChatGPT.
     """
 
-    def __init__(self, ax, line, points, y_converter):
+    def __init__(self, ax, line, points, avg_lp_diff, y_converter):
         self.ax = ax
         self.line = line
         self.x, self.y = line.get_data()
         self.points = points
+        self.avg_lp_diff = avg_lp_diff
         self.y_converter = y_converter
         self._last_index = None
         self.background = None
@@ -60,12 +61,19 @@ class Cursor:
     def set_info_text(self, index):
         date_str = self.get_date_str(index)
         patch = self.points[index]["patch"]
+        avg_lp_diff = self.avg_lp_diff[index]
 
-        text = "({}): [{}]\nPatch: {}. ({} games ago)".format(
+        if avg_lp_diff is not None:
+            avg_lp_diff_str = "\nRolling avg LP +/-: {:.1f}".format(avg_lp_diff)
+        else:
+            avg_lp_diff_str = ""
+
+        text = "({}): [{}]\nPatch: {}. ({} games ago){}".format(
             date_str,
             self.y_converter(self.y[index]),
             patch,
             len(self.points) - index - 1,
+            avg_lp_diff_str,
         )
 
         self.text.set_text(text)

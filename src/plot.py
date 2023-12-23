@@ -241,11 +241,16 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
 
     plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
     plt.grid(which="minor", linestyle="-", linewidth="0.35", color="black")
+    
+    # Calculate the rolling averages
+    x_vals, rolling_avg_diff = lp_diff_rolling_avg(points)
+
 
     crosshair = cursor.Cursor(
         ax,
         line,
         points,
+        rolling_avg_diff,
         lambda y: data.value_to_rank(y, None, thresholds, short=True, show_lp=True),
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
@@ -263,9 +268,6 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
         peak["patch"],
         peak["x"],
     )
-
-    # Calculate the rolling averages
-    x_vals, rolling_avg_diff = lp_diff_rolling_avg(points)
 
     # Create secondary y-axis for the rolling average difference
     ax2 = ax.twinx()
