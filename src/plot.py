@@ -157,6 +157,7 @@ def lp_diff_rolling_avg(points: list[dict]) -> tuple[list, list]:
     rolling_avg_diff = []
     x_vals = []
 
+    logger.info("Calculating rolling average LP diff...")
     for point in points:
         if point["lp_diff"] is not None:
             lp_diff = abs(point["lp_diff"])
@@ -193,8 +194,9 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]
 
-    fig, ax = plt.subplots()
-    (line,) = ax.plot(x_values, y_values, color="black", linewidth=0.7)
+    fig, ax = plt.subplots(constrained_layout=True)
+    (line,) = ax.plot(x_values, y_values, color="#E8E8E8", linewidth=0.7)
+    ax.set_facecolor("#343541")
     fig.patch.set_facecolor("#343541")
 
     manager = plt.get_current_fig_manager()
@@ -267,7 +269,7 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
 
     # Create secondary y-axis for the rolling average difference
     ax2 = ax.twinx()
-    ax2.plot(x_vals, rolling_avg_diff, "#E8E8E8", linewidth=0.7)
+    ax2.plot(x_vals, rolling_avg_diff, "black", linewidth=0.5)
     ax2.set_ylabel("Rolling Average LP Difference", color="white")
     ax2.tick_params(axis="y", labelcolor="white")
     ax2.axhline(y=0, color="black", linewidth=2)

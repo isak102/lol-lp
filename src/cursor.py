@@ -16,8 +16,8 @@ class Cursor:
         self.y_converter = y_converter
         self._last_index = None
         self.background = None
-        self.horizontal_line = ax.axhline(color="k", lw=0.8, ls="--")
-        self.vertical_line = ax.axvline(color="k", lw=0.8, ls="--")
+        self.horizontal_line = ax.axhline(color="white", linestyle=":")
+        self.vertical_line = ax.axvline(color="white", linestyle=":")
         props = dict(boxstyle="round", facecolor="black", alpha=0.5)
         self.text = ax.text(
             0.0125,
