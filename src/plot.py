@@ -182,6 +182,13 @@ def lp_diff_rolling_avg(points: list[dict]) -> tuple[list, list]:
     return x_vals, rolling_avg_diff
 
 
+def on_key(event, ax2):
+    if event.key == "l":  # Replace 't' with the key you want to use
+        line_visibility = ax2.get_lines()[0].get_visible()
+        ax2.get_lines()[0].set_visible(not line_visibility)
+        plt.draw()
+
+
 def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[dict]):
     logger.info("Extracting points...")
     points = extract_points(pages)
@@ -241,10 +248,9 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
 
     plt.grid(which="major", linestyle="-", linewidth="0.35", color="black", axis="y")
     plt.grid(which="minor", linestyle="-", linewidth="0.35", color="black")
-    
+
     # Calculate the rolling averages
     x_vals, rolling_avg_diff = lp_diff_rolling_avg(points)
-
 
     crosshair = cursor.Cursor(
         ax,
@@ -275,6 +281,7 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     ax2.set_ylabel("Rolling Average LP Difference", color="white")
     ax2.tick_params(axis="y", labelcolor="white")
     ax2.axhline(y=0, color="black", linewidth=2)
+    fig.canvas.mpl_connect("key_press_event", lambda event: on_key(event, ax2))
 
     # Set the title and x-axis label
     ax.set_xlabel("Games Ago", color="white")
