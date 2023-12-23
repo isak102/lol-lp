@@ -37,6 +37,11 @@ try:
     if args.select:
         util.notif(f"Fetching pages for {args.riot_id}...")
     pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
+
+    if len(pages) == 0:
+        if args.select:
+            util.notif(f"No data found.", 5000)
+        exit(0)
 except Exception as e:
     print(f"Error fetching pages: {e}")
     if args.select:

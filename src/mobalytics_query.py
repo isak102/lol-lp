@@ -86,7 +86,8 @@ async def get_lphistory(
 ) -> list[dict]:
     """
     Asynchronously fetches a player's League of Legends LP history from the Mobalytics API,
-    using batched requests to manage load. Throws an exception if any page fails to fetch.
+    using batched requests to manage load. Throws an exception if any page fails to fetch. If
+    the first page has no data (e.g no games played), an empty list is returned.
     """
     async with aiohttp.ClientSession() as session:
         try:
@@ -98,6 +99,9 @@ async def get_lphistory(
 
             total_pages = first_page.get("pageInfo", {}).get("totalPages", 0)
             logger.info(f"Total pages: {total_pages}")
+            if total_pages == 0:
+                logger.warning(f"First page has no data.")
+                return []
 
             if page_limit is not None:
                 total_pages = min(total_pages, page_limit)
