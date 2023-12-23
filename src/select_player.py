@@ -65,7 +65,7 @@ def parse_url(url: str) -> tuple[str, str]:
 
 def transform_riot_id(riot_id: str, region: str) -> str:
     # TODO: append default tagline ?
-    decoded = urllib.unquote(riot_id.replace("-", "#"))
+    decoded = urllib.unquote(riot_id.replace("-", "#").replace("+", " "))
     return decoded
 
 
