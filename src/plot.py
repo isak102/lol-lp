@@ -146,7 +146,7 @@ def extract_points(pages: list) -> list[dict]:
     return points
 
 
-def plot(summoner_name: str, region: str, pages: list[dict]):
+def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[dict]):
     logger.info("Extracting points...")
     points = extract_points(pages)
     logger.info(f"Found {len(points)} points")
@@ -154,9 +154,6 @@ def plot(summoner_name: str, region: str, pages: list[dict]):
     logger.info("Filling in x values...")
     for i, point in enumerate(reversed(points)):
         point["x"] = i
-
-    logger.info("Merging thresholds...")
-    thresholds = data.merge_thresholds([page["thresholds"] for page in pages])
 
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]

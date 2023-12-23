@@ -33,6 +33,7 @@ try:
     import asyncio
 
     import src.api as api
+    import src.data_processing as data_processing
 
     if args.select:
         util.notif(f"Fetching pages for {args.riot_id}...")
@@ -42,10 +43,18 @@ try:
         if args.select:
             util.notif(f"No data found.", 5000)
         exit(0)
-except Exception as e:
-    print(f"Error fetching pages: {e}")
+
     if args.select:
-        util.notif(f"❌ Error fetching pages", 5000)
+        util.notif(f"Merging thresholds...")
+    thresholds = data_processing.merge_thresholds(
+        [page["thresholds"] for page in pages], args.region.upper()
+    )
+
+except Exception as e:
+    error_msg = "Error getting data"
+    print(f"{error_msg}: {e}")
+    if args.select:
+        util.notif(f"❌ {error_msg}", 5000)
     exit(1)
 
 if args.select:
@@ -53,4 +62,4 @@ if args.select:
 
 import src.plot as plot
 
-plot.plot(args.riot_id, args.region.upper(), pages)
+plot.plot(args.riot_id, args.region.upper(), pages, thresholds)

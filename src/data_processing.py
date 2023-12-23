@@ -4,8 +4,8 @@ import src.util as util
 from src.config import MASTER_VALUE
 
 
-def merge_thresholds(dicts) -> list[dict]:
-    def adjust_apex_thresholds(thresholds: list):
+def merge_thresholds(all_tresholds: list[list[dict]], region: str) -> list[dict]:
+    def set_apex_cutoffs(thresholds: list, region: str):
         master = next((item for item in thresholds if item["tier"] == "MASTER"), None)
         grandmaster = next(
             (item for item in thresholds if item["tier"] == "GRANDMASTER"), None
@@ -14,43 +14,43 @@ def merge_thresholds(dicts) -> list[dict]:
             (item for item in thresholds if item["tier"] == "CHALLENGER"), None
         )
 
-        if master and grandmaster:
-            lp_cutoff = int((master["maxLP"] + grandmaster["minLP"]) / 2)
-            value = MASTER_VALUE + lp_cutoff
-            master["maxValue"] = value
-            grandmaster["minValue"] = value
+        if master or grandmaster or challenger:
+            from src.api import get_apex_cutoffs
 
-        if grandmaster and challenger:
-            lp_cutoff = int((grandmaster["maxLP"] + challenger["minLP"]) / 2)
-            value = MASTER_VALUE + lp_cutoff
-            grandmaster["maxValue"] = value
-            challenger["minValue"] = value
-            challenger["maxValue"] = maxsize
+            cutoffs = get_apex_cutoffs(region)
+            gm_cutoff = MASTER_VALUE + cutoffs["grandmaster"]
+            chall_cutoff = MASTER_VALUE + cutoffs["challenger"]
 
-    merged = []
-    for lst in dicts:
-        to_add = []
+            if master:
+                master["minValue"] = MASTER_VALUE
+                master["maxValue"] = gm_cutoff
+
+            if master and grandmaster:
+                grandmaster["minValue"] = gm_cutoff
+                grandmaster["maxValue"] = chall_cutoff
+
+            if master and grandmaster and challenger:
+                challenger["minValue"] = chall_cutoff
+                challenger["maxValue"] = maxsize
+
+    thresholds = []
+    seen = set()
+    for lst in all_tresholds:
         for threshold in lst:
-            predicate = (
-                lambda x: x["tier"] == threshold["tier"]
-                and x["division"] == threshold["division"]
-            )
-            matching = next((item for item in merged if predicate(item)), None)
-            if matching is not None:
-                if util.is_apex(threshold["tier"]):
-                    # Dont merge apex thresholds, only keep the latest one
-                    continue
-                matching["minValue"] = min(matching["minValue"], threshold["minValue"])
-                matching["maxValue"] = max(matching["maxValue"], threshold["maxValue"])
-            else:
-                to_add.append(threshold)
-        merged.extend(to_add)
-    adjust_apex_thresholds(merged)
+            # Create a unique key for each 'tier'-'division' combination
+            key = (threshold["tier"], threshold["division"])
 
-    highest = max(merged[::-1], key=lambda x: (x["maxValue"]))
+            # Add the threshold only if the key hasn't been seen before
+            if key not in seen:
+                thresholds.append(threshold)
+                seen.add(key)
+
+    set_apex_cutoffs(thresholds, region)
+
+    highest = max(thresholds[::-1], key=lambda x: (x["maxValue"]))
     highest["maxValue"] = maxsize
 
-    return merged
+    return thresholds
 
 
 def value_to_rank(
