@@ -1,7 +1,10 @@
+import logging
 from sys import maxsize
 
 import src.util as util
 from src.config import MASTER_VALUE
+
+logger = logging.getLogger(__name__)
 
 
 def merge_thresholds(all_tresholds: list[list[dict]], region: str) -> list[dict]:
@@ -18,6 +21,7 @@ def merge_thresholds(all_tresholds: list[list[dict]], region: str) -> list[dict]
             from src.api import get_apex_cutoffs
 
             cutoffs = get_apex_cutoffs(region)
+            logger.info(f"Apex cutoffs: {cutoffs}")
             gm_cutoff = MASTER_VALUE + cutoffs["grandmaster"]
             chall_cutoff = MASTER_VALUE + cutoffs["challenger"]
 
@@ -32,7 +36,10 @@ def merge_thresholds(all_tresholds: list[list[dict]], region: str) -> list[dict]
             if master and grandmaster and challenger:
                 challenger["minValue"] = chall_cutoff
                 challenger["maxValue"] = maxsize
+        else:
+            logger.info("No apex tiers found, skipping cutoffs")
 
+    logger.info("Merging thresholds...")
     thresholds = []
     seen = set()
     for lst in all_tresholds:
