@@ -6,6 +6,7 @@ import logging
 import src.mobalytics_query as api
 import src.plot as plot
 import src.select_player as select_player
+import src.util as util
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]: %(message)s")
 
@@ -31,9 +32,15 @@ elif not args.riot_id or not args.region:
     )
 
 try:
+    if args.select:
+        util.notif(f"Fetching pages for {args.riot_id}...")
     pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
 except Exception as e:
     print(f"Error fetching pages: {e}")
+    if args.select:
+        util.notif(f"❌ Error fetching pages", 5000)
     exit(1)
 
+if args.select:
+    util.notif("Done", 1)
 plot.plot(args.riot_id, pages)
