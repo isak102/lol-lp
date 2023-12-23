@@ -1,5 +1,6 @@
 import datetime
 import logging
+from collections import deque
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -55,7 +56,7 @@ def color_rank_intervals(thresholds: list[dict], min_y, max_y):
             lower_bound = min(min_y, lower_bound)
 
         plt.axhspan(
-            lower_bound, upper_bound, facecolor=config.RANK_COLORS[tier], alpha=0.6
+            lower_bound, upper_bound, facecolor=config.RANK_COLORS[tier], alpha=0.8
         )
 
 
@@ -140,10 +141,44 @@ def extract_points(pages: list) -> list[dict]:
                     item["startedAt"], config.LOCAL_TIMEZONE
                 ),
                 "patch": item["patch"],
+                "result": item["result"],
+                "lp_diff": item["lp"]["lpDiff"],
             }
             points.append(point)
 
     return points
+
+
+def lp_diff_rolling_avg(points: list[dict]) -> tuple[list, list]:
+    ROLLING_AVG_WINDOW = 15
+
+    win_lp_diffs = deque(maxlen=ROLLING_AVG_WINDOW)
+    loss_lp_diffs = deque(maxlen=ROLLING_AVG_WINDOW)
+    rolling_avg_diff = []
+    x_vals = []
+
+    for point in points:
+        if point["lp_diff"] is not None:
+            lp_diff = abs(point["lp_diff"])
+            if lp_diff > 10 and lp_diff < 100:
+                if point["result"] == "WON":
+                    win_lp_diffs.append(lp_diff)
+                elif point["result"] == "LOST":
+                    loss_lp_diffs.append(lp_diff)
+
+        # Calculate rolling average for wins if we have enough data points
+        if (
+            len(win_lp_diffs) == ROLLING_AVG_WINDOW
+            and len(loss_lp_diffs) == ROLLING_AVG_WINDOW
+        ):
+            avg_win = sum(win_lp_diffs) / ROLLING_AVG_WINDOW
+            avg_loss = sum(loss_lp_diffs) / ROLLING_AVG_WINDOW
+            rolling_avg_diff.append(round(avg_win - avg_loss, 2))
+        else:
+            rolling_avg_diff.append(None)
+        x_vals.append(point["x"])
+
+    return x_vals, rolling_avg_diff
 
 
 def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[dict]):
@@ -227,7 +262,19 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
         peak["x"],
     )
 
-    plt.title(title, color="white")
-    plt.xlabel("Games ago", color="white")
-    plt.ylabel("Rank", color="white")
+    # Calculate the rolling averages
+    x_vals, rolling_avg_diff = lp_diff_rolling_avg(points)
+
+    # Create secondary y-axis for the rolling average difference
+    ax2 = ax.twinx()
+    ax2.plot(x_vals, rolling_avg_diff, "#E8E8E8", linewidth=0.7)
+    ax2.set_ylabel("Rolling Average LP Difference", color="white")
+    ax2.tick_params(axis="y", labelcolor="white")
+    ax2.axhline(y=0, color="black", linewidth=2)
+
+    # Set the title and x-axis label
+    ax.set_xlabel("Games Ago", color="white")
+    ax.set_ylabel("Rank", color="white")
+    ax.set_title(title, color="white")
+
     plt.show()
