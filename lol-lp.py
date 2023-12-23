@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 import argparse
-import asyncio
 import logging
 
-import src.mobalytics_query as api
-import src.plot as plot
-import src.select_player as select_player
 import src.util as util
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]: %(message)s")
@@ -21,6 +17,8 @@ parser.add_argument("-r", "--region", help="Region of the player")
 args = parser.parse_args()
 
 if args.select:
+    import src.select_player as select_player
+
     if args.riot_id or args.region:
         parser.error(
             "Do not provide -i/--riot-id or -r/--region when using -s/--select"
@@ -32,6 +30,10 @@ elif not args.riot_id or not args.region:
     )
 
 try:
+    import asyncio
+
+    import src.mobalytics_query as api
+
     if args.select:
         util.notif(f"Fetching pages for {args.riot_id}...")
     pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
@@ -43,4 +45,7 @@ except Exception as e:
 
 if args.select:
     util.notif("Done", 1)
+
+import src.plot as plot
+
 plot.plot(args.riot_id, pages)
