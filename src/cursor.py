@@ -62,7 +62,10 @@ class Cursor:
         patch = self.points[index]["patch"]
 
         text = "({}): [{}]\nPatch: {}. ({} games ago)".format(
-            date_str, self.y_converter(self.y[index]), patch, len(self.points) - index
+            date_str,
+            self.y_converter(self.y[index]),
+            patch,
+            len(self.points) - index - 1,
         )
 
         self.text.set_text(text)
