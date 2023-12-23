@@ -32,7 +32,7 @@ elif not args.riot_id or not args.region:
 try:
     import asyncio
 
-    import src.mobalytics_query as api
+    import src.api as api
 
     if args.select:
         util.notif(f"Fetching pages for {args.riot_id}...")
