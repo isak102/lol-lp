@@ -131,7 +131,9 @@ async def get_lphistory(
             raise
 
 
-def get_apex_cutoffs(region: str) -> dict[str, int]:
+def get_apex_cutoffs(
+    region: str,
+) -> dict[str, int]:  # TODO: handle the case where no cutoffs exist
     """
     Returns a dictionary mapping each apex tier to its cutoff value. Gets the cutoffs from
     deeplol.gg. Will throw an exception if the request fails.
