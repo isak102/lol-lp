@@ -26,7 +26,7 @@ class Cursor:
             color="white",
             transform=ax.transAxes,
             bbox=props,
-            fontsize=14,
+            fontsize=12,
             verticalalignment="top",
             horizontalalignment="left",
         )
@@ -60,9 +60,12 @@ class Cursor:
     def set_info_text(self, index):
         date_str = self.get_date_str(index)
         patch = self.points[index]["patch"]
-        self.text.set_text(
-            f"({date_str}): [{self.y_converter(self.y[index])}]\nPatch: {patch}"
+
+        text = "({}): [{}]\nPatch: {}. ({} games ago)".format(
+            date_str, self.y_converter(self.y[index]), patch, len(self.points) - index
         )
+
+        self.text.set_text(text)
 
     def on_mouse_move(self, event):
         if self.background is None:
