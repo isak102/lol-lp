@@ -4,9 +4,9 @@ import logging
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
+import src.config as config
 import src.cursor as cursor
 import src.data_processing as data
-from src.config import LOCAL_TIMEZONE, MASTER_VALUE, RANK_COLORS
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def get_major_ticks(y_values: list, thresholds: list[dict]) -> list:
     ticks = [  # get all ticks up to master
         f
-        for f in range(min(y_values), min(max(y_values), MASTER_VALUE) + 1)
+        for f in range(min(y_values), min(max(y_values), config.MASTER_VALUE) + 1)
         if f % 400 == 0
     ]
 
@@ -54,7 +54,9 @@ def color_rank_intervals(thresholds: list[dict], min_y, max_y):
         if is_lowest(tier):
             lower_bound = min(min_y, lower_bound)
 
-        plt.axhspan(lower_bound, upper_bound, facecolor=RANK_COLORS[tier], alpha=0.6)
+        plt.axhspan(
+            lower_bound, upper_bound, facecolor=config.RANK_COLORS[tier], alpha=0.6
+        )
 
 
 def insert_patch_lines(points: list, ax, min_distance=4) -> list:
@@ -112,14 +114,14 @@ def extract_points(pages: list) -> list[dict]:
             # If there was no lp before and after then the game was a placement game
             return None
 
-        if value > MASTER_VALUE:
-            y = MASTER_VALUE + lp
-        elif value == MASTER_VALUE:
+        if value > config.MASTER_VALUE:
+            y = config.MASTER_VALUE + lp
+        elif value == config.MASTER_VALUE:
             if lp == 100:
                 # FIXME: This is a hack to avoid D1 promos appearing as master 0LP. maybe introduces bugs?
-                y = MASTER_VALUE - 1
+                y = config.MASTER_VALUE - 1
             else:
-                y = MASTER_VALUE + lp
+                y = config.MASTER_VALUE + lp
         else:
             y = value
 
@@ -135,7 +137,7 @@ def extract_points(pages: list) -> list[dict]:
             point = {
                 "y": y_value,
                 "date": datetime.datetime.fromtimestamp(
-                    item["startedAt"], LOCAL_TIMEZONE
+                    item["startedAt"], config.LOCAL_TIMEZONE
                 ),
                 "patch": item["patch"],
             }
@@ -147,6 +149,7 @@ def extract_points(pages: list) -> list[dict]:
 def plot(summoner_name: str, region: str, pages: list[dict]):
     logger.info("Extracting points...")
     points = extract_points(pages)
+    logger.info(f"Found {len(points)} points")
 
     logger.info("Filling in x values...")
     for i, point in enumerate(reversed(points)):
@@ -161,6 +164,15 @@ def plot(summoner_name: str, region: str, pages: list[dict]):
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black", linewidth=0.7)
     fig.patch.set_facecolor("#343541")
+
+    manager = plt.get_current_fig_manager()
+    if manager is not None:
+        # TODO: handle other backends
+        from PyQt5 import QtGui
+
+        logger.info(f"Manager {manager} found, setting window title and icon...")
+        manager.set_window_title(f"LP History - {summoner_name} ({region})")
+        manager.window.setWindowIcon(QtGui.QIcon(config.ICON_PATH))  # type: ignore
 
     Y_AXIS_PADDING = 10
     y_axis_min = min(y_values) - Y_AXIS_PADDING
@@ -209,7 +221,7 @@ def plot(summoner_name: str, region: str, pages: list[dict]):
 
     peak = max(points, key=lambda x: x["y"])
 
-    title = "Rank history - [{}] - [{}]\nPeak: {} at {} patch {} ({} games ago)".format(
+    title = "LP History - [{}] - [{}]\nPeak: {} at {} patch {} ({} games ago)".format(
         summoner_name,
         region,
         data.value_to_rank(peak["y"], None, thresholds, short=True, show_lp=True),

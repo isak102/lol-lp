@@ -2,7 +2,9 @@ import os
 
 import pytz
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOCAL_TIMEZONE = pytz.timezone("Europe/Stockholm")
+
 MASTER_VALUE = 2800  # the value of 0LP master
 RANK_COLORS = {
     "IRON": "#b5a58b",
@@ -24,3 +26,4 @@ BOOKMARKS_FILE = os.path.join(
     "Default",
     "Bookmarks",
 )
+ICON_PATH = os.path.join(PROJECT_ROOT, "assets", "icon.png")
