@@ -2,8 +2,9 @@ import asyncio
 import logging
 
 import aiohttp
+import requests
 
-__all__ = ["get_lphistory"]
+__all__ = ["get_lphistory", "get_apex_cutoffs"]
 
 logger = logging.getLogger(__name__)
 
@@ -128,3 +129,40 @@ async def get_lphistory(
         except Exception as e:
             logger.error(f"Error when fetching pages for: {summoner_name}: {e}")
             raise
+
+
+def get_apex_cutoffs(region: str) -> dict[str, int]:
+    """
+    Returns a dictionary mapping each apex tier to its cutoff value. Gets the cutoffs from
+    deeplol.gg. Will throw an exception if the request fails.
+    """
+    REGION_TO_CODE = {
+        "NA": "NA1",
+        "EUW": "EUW1",
+        "EUNE": "EUN1",
+        "BR": "BR1",
+        "JP": "JP1",
+        "KR": "KR",
+        "LAN": "LA1",
+        "LAS": "LA2",
+        "OCE": "OC1",
+        "TR": "TR1",
+    }
+
+    try:
+        headers = {
+            "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://www.deeplol.gg/",
+            "sec-ch-ua-mobile": "?0",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "sec-ch-ua-platform": '"Linux"',
+        }
+        response = requests.get(
+            "https://b2c-api-cdn.deeplol.gg/common/tier-boundary", headers=headers
+        )
+        if response.status_code != 200:
+            response.raise_for_status()
+        return response.json()["tier_boundary_solo"][REGION_TO_CODE[region.upper()]]
+    except Exception as e:
+        raise Exception(f"Error fetching apex cutoffs: {e}")
