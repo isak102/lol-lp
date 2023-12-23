@@ -53,4 +53,4 @@ if args.select:
 
 import src.plot as plot
 
-plot.plot(args.riot_id, pages)
+plot.plot(args.riot_id, args.region.upper(), pages)

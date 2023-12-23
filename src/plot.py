@@ -144,7 +144,7 @@ def extract_points(pages: list) -> list[dict]:
     return points
 
 
-def plot(summoner_name: str, pages: list[dict]):
+def plot(summoner_name: str, region: str, pages: list[dict]):
     logger.info("Extracting points...")
     points = extract_points(pages)
 
@@ -209,8 +209,9 @@ def plot(summoner_name: str, pages: list[dict]):
 
     peak = max(points, key=lambda x: x["y"])
 
-    title = "Rank history - [{}]\nPeak: {} at {} patch {} ({} games ago)".format(
+    title = "Rank history - [{}] - [{}]\nPeak: {} at {} patch {} ({} games ago)".format(
         summoner_name,
+        region,
         data.value_to_rank(peak["y"], None, thresholds, short=True, show_lp=True),
         peak["date"].strftime("%b %d"),
         peak["patch"],
