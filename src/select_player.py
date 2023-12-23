@@ -60,7 +60,7 @@ def parse_url(url: str) -> tuple[str, str]:
         else:
             riot_id = parts[-1]
 
-    return (transform_riot_id(riot_id, region), region)
+    return (transform_riot_id(riot_id, region), region.upper())
 
 
 def transform_riot_id(riot_id: str, region: str) -> str:
