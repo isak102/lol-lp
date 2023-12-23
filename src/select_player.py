@@ -2,7 +2,7 @@ import json
 import subprocess
 import urllib.parse as urllib
 
-from src.config import BOOKMARKS_FILE
+import src.config as config
 
 __all__ = ["select_player"]
 
@@ -22,7 +22,7 @@ def get_opgg_urls() -> list[tuple[str, str]]:
 
         return new_url
 
-    with open(BOOKMARKS_FILE, "r") as file:
+    with open(config.BOOKMARKS_FILE, "r") as file:
         bookmarks = json.load(file)
 
     opgg_urls = []
@@ -87,13 +87,13 @@ def select_player() -> tuple[str, str]:
     process = subprocess.Popen(
         [
             "dmenu",
-            "-p",
-            "Select player",
             "-ix",
+            "-p",
+            str(config.DMENU_PROMPT),
             "-l",
-            "25",
+            str(config.DMENU_LINES),
             "-g",
-            "3",
+            str(config.DMENU_COLUMNS),
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,

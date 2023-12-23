@@ -27,3 +27,7 @@ BOOKMARKS_FILE = os.path.join(
     "Bookmarks",
 )
 ICON_PATH = os.path.join(PROJECT_ROOT, "assets", "icon.png")
+
+DMENU_LINES = 25
+DMENU_COLUMNS = 3
+DMENU_PROMPT = "Select player"
