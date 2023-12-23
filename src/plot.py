@@ -158,8 +158,6 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]
 
-    plt.rcParams['toolbar'] = "None"
-
     fig, ax = plt.subplots()
     (line,) = ax.plot(x_values, y_values, color="black", linewidth=0.7)
     fig.patch.set_facecolor("#343541")
