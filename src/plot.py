@@ -304,7 +304,9 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     # Create secondary y-axis for the rolling average difference
     ax2 = ax.twinx()
     ax2.plot(x_values, r_avg_lpdiff, "black", linewidth=0.5, visible=False)
-    ax2.set_ylabel("Rolling Average LP Difference", color="white")
+    ax2.set_ylabel(
+        f"Rolling Average LP Difference [window={config.LPDIFF_WINDOW}]", color="white"
+    )
     ax2.tick_params(axis="y", labelcolor="white")
     ax2.axhline(y=0, color="black", linewidth=2)
     ax2.set_visible(False)
@@ -327,7 +329,9 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     ax3.plot(
         adjusted_x_values, smoothed_r_avg_wr, "black", linewidth=0.5, visible=False
     )
-    ax3.set_ylabel("Rolling average winrate", color="white")
+    ax3.set_ylabel(
+        f"Rolling average winrate [window={config.WR_WINDOW}]", color="white"
+    )
     ax3.set_ylim(0, 1)
     ax3.axhline(y=0.5, color="black", linewidth=2)
     ax3.set_visible(False)
