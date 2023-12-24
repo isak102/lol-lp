@@ -3,6 +3,7 @@ import logging
 from collections import deque
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import FuncFormatter
 
 import src.config as config
@@ -178,7 +179,7 @@ def insert_roll_avg_lpdiff(points: list[dict]) -> None:
 
 
 def insert_roll_avg_wr(points: list[dict]) -> None:
-    ROLLING_AVG_WINDOW = 20
+    ROLLING_AVG_WINDOW = 30
 
     winrates = deque(maxlen=ROLLING_AVG_WINDOW)
 
@@ -198,10 +199,18 @@ def insert_roll_avg_wr(points: list[dict]) -> None:
             point["roll_avg_wr"] = None
 
 
-def on_key(event, ax2):
+def on_key(event, r_avg_lpdiff, r_avg_wr):
     if event.key == "l":  # Replace 't' with the key you want to use
-        line_visibility = ax2.get_lines()[0].get_visible()
-        ax2.get_lines()[0].set_visible(not line_visibility)
+        line_visibility = r_avg_lpdiff.get_lines()[0].get_visible()
+        axis_visibility = r_avg_lpdiff.axes.get_visible()
+        r_avg_lpdiff.get_lines()[0].set_visible(not line_visibility)
+        r_avg_lpdiff.axes.set_visible(not axis_visibility)
+        plt.draw()
+    elif event.key == "w":
+        axis_visibility = r_avg_wr.axes.get_visible()
+        line_visibility = r_avg_wr.get_lines()[0].get_visible()
+        r_avg_wr.get_lines()[0].set_visible(not line_visibility)
+        r_avg_wr.axes.set_visible(not axis_visibility)
         plt.draw()
 
 
@@ -293,20 +302,41 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
         peak["x"],
     )
 
-    rolling_avg_diff = [point["roll_avg_lpdiff"] for point in points]
+    r_avg_lpdiff = [point["roll_avg_lpdiff"] for point in points]
+    r_avg_wr = [point["roll_avg_wr"] for point in points if point["roll_avg_wr"]]
 
     # Create secondary y-axis for the rolling average difference
     ax2 = ax.twinx()
-    ax2.plot(x_values, rolling_avg_diff, "black", linewidth=0.5)
+    ax2.plot(x_values, r_avg_lpdiff, "black", linewidth=0.5, visible=False)
     ax2.set_ylabel("Rolling Average LP Difference", color="white")
     ax2.tick_params(axis="y", labelcolor="white")
     ax2.axhline(y=0, color="black", linewidth=2)
+    ax2.set_visible(False)
 
-    OFFSET = 1 # Offset for the y-axis limits
-    filtered_diff = [val for val in rolling_avg_diff if val is not None]
+    OFFSET = 2  # Offset for the y-axis limits
+    filtered_diff = [val for val in r_avg_lpdiff if val is not None]
     max_diff = max(abs(min(filtered_diff)), max(filtered_diff)) if filtered_diff else 0
     ax2.set_ylim(-max_diff - OFFSET, max_diff + OFFSET)
-    fig.canvas.mpl_connect("key_press_event", lambda event: on_key(event, ax2))
+
+    window_size = 3  # Adjust this as needed
+    smoothed_r_avg_wr = np.convolve(
+        r_avg_wr, np.ones(window_size) / window_size, mode="valid"
+    )
+    adjusted_x_values = x_values[len(x_values) - len(smoothed_r_avg_wr) :]
+
+    ax3 = ax.twinx()
+    ax3.spines["right"].set_position(("outward", 60))  # Offset the right spine of ax3
+    ax3.spines["right"].set_color("white")
+    ax3.tick_params(axis="y", labelcolor="white")
+    ax3.plot(
+        adjusted_x_values, smoothed_r_avg_wr, "black", linewidth=0.5, visible=False
+    )
+    ax3.set_ylabel("Rolling average winrate", color="white")
+    ax3.set_ylim(0, 1)
+    ax3.axhline(y=0.5, color="black", linewidth=2)
+    ax3.set_visible(False)
+
+    fig.canvas.mpl_connect("key_press_event", lambda event: on_key(event, ax2, ax3))
 
     # Set the title and x-axis label
     ax.set_xlabel("Games Ago", color="white")
