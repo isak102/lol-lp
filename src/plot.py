@@ -151,10 +151,8 @@ def extract_points(pages: list) -> list[dict]:
 
 
 def insert_roll_avg_lpdiff(points: list[dict]) -> None:
-    ROLLING_AVG_WINDOW = 15
-
-    win_lp_diffs = deque(maxlen=ROLLING_AVG_WINDOW)
-    loss_lp_diffs = deque(maxlen=ROLLING_AVG_WINDOW)
+    win_lp_diffs = deque(maxlen=config.LPDIFF_WINDOW)
+    loss_lp_diffs = deque(maxlen=config.LPDIFF_WINDOW)
 
     logger.info("Calculating rolling average LP diff...")
     for point in points:
@@ -168,20 +166,18 @@ def insert_roll_avg_lpdiff(points: list[dict]) -> None:
 
         # Calculate rolling average for wins if we have enough data points
         if (
-            len(win_lp_diffs) == ROLLING_AVG_WINDOW
-            and len(loss_lp_diffs) == ROLLING_AVG_WINDOW
+            len(win_lp_diffs) == config.LPDIFF_WINDOW
+            and len(loss_lp_diffs) == config.LPDIFF_WINDOW
         ):
-            avg_win = sum(win_lp_diffs) / ROLLING_AVG_WINDOW
-            avg_loss = sum(loss_lp_diffs) / ROLLING_AVG_WINDOW
+            avg_win = sum(win_lp_diffs) / config.LPDIFF_WINDOW
+            avg_loss = sum(loss_lp_diffs) / config.LPDIFF_WINDOW
             point["roll_avg_lpdiff"] = avg_win - avg_loss
         else:
             point["roll_avg_lpdiff"] = None
 
 
 def insert_roll_avg_wr(points: list[dict]) -> None:
-    ROLLING_AVG_WINDOW = 30
-
-    winrates = deque(maxlen=ROLLING_AVG_WINDOW)
+    winrates = deque(maxlen=config.WR_WINDOW)
 
     logger.info("Calculating rolling average winrate...")
     for point in points:
@@ -192,8 +188,8 @@ def insert_roll_avg_wr(points: list[dict]) -> None:
                 winrates.append(0)
 
         # Calculate rolling average for wins if we have enough data points
-        if len(winrates) == ROLLING_AVG_WINDOW:
-            avg_winrate = sum(winrates) / ROLLING_AVG_WINDOW
+        if len(winrates) == config.WR_WINDOW:
+            avg_winrate = sum(winrates) / config.WR_WINDOW
             point["roll_avg_wr"] = avg_winrate
         else:
             point["roll_avg_wr"] = None
