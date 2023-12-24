@@ -61,17 +61,24 @@ class Cursor:
         date_str = self.get_date_str(index)
         patch = self.points[index]["patch"]
         r_avg_lp_diff = self.points[index]["roll_avg_lpdiff"]
+        r_avg_wr = self.points[index]["roll_avg_wr"]
 
         if r_avg_lp_diff is not None:
-            avg_lp_diff_str = "\nRolling avg LP +/-: {:.1f}".format(r_avg_lp_diff)
+            avg_lp_diff_str = "{:.1f}".format(r_avg_lp_diff)
         else:
-            avg_lp_diff_str = ""
+            avg_lp_diff_str = "N/A"
 
-        text = "({}): [{}]\nPatch: {}. ({} games ago){}".format(
+        if r_avg_wr is not None:
+            avg_wr_str = "{:.1f}%".format(r_avg_wr * 100)
+        else:
+            avg_wr_str = "N/A"
+
+        text = "({}): [{}]\nPatch: {}. ({} games ago)\nRolling avg WR: {}\nRolling avg LP +/-: {}".format(
             date_str,
             self.y_converter(self.y[index]),
             patch,
             len(self.points) - index - 1,
+            avg_wr_str,
             avg_lp_diff_str,
         )
 
