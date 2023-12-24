@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import logging
+from time import sleep
 
 import src.util as util
 
@@ -58,6 +59,7 @@ except Exception as e:
     exit(1)
 
 if args.select:
+    sleep(0.01)  # without this the notif sometimes gets stuck
     util.notif("Done", 1)
 
 import src.plot as plot
