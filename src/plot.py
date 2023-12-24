@@ -149,13 +149,11 @@ def extract_points(pages: list) -> list[dict]:
     return points
 
 
-def rolling_avg_lpdiff(points: list[dict]) -> tuple[list, list]:
+def insert_roll_avg_lpdiff(points: list[dict]) -> None:
     ROLLING_AVG_WINDOW = 15
 
     win_lp_diffs = deque(maxlen=ROLLING_AVG_WINDOW)
     loss_lp_diffs = deque(maxlen=ROLLING_AVG_WINDOW)
-    rolling_avg_diff = []
-    x_vals = []
 
     logger.info("Calculating rolling average LP diff...")
     for point in points:
@@ -174,20 +172,15 @@ def rolling_avg_lpdiff(points: list[dict]) -> tuple[list, list]:
         ):
             avg_win = sum(win_lp_diffs) / ROLLING_AVG_WINDOW
             avg_loss = sum(loss_lp_diffs) / ROLLING_AVG_WINDOW
-            rolling_avg_diff.append(round(avg_win - avg_loss, 2))
+            point["roll_avg_lpdiff"] = avg_win - avg_loss
         else:
-            rolling_avg_diff.append(None)
-        x_vals.append(point["x"])
-
-    return x_vals, rolling_avg_diff
+            point["roll_avg_lpdiff"] = None
 
 
-def rolling_avg_winrate(points: list[dict]) -> tuple[list[int], list[float]]:
+def insert_roll_avg_wr(points: list[dict]) -> None:
     ROLLING_AVG_WINDOW = 20
 
     winrates = deque(maxlen=ROLLING_AVG_WINDOW)
-    rolling_avg_winrate = []
-    x_vals = []
 
     logger.info("Calculating rolling average winrate...")
     for point in points:
@@ -200,12 +193,9 @@ def rolling_avg_winrate(points: list[dict]) -> tuple[list[int], list[float]]:
         # Calculate rolling average for wins if we have enough data points
         if len(winrates) == ROLLING_AVG_WINDOW:
             avg_winrate = sum(winrates) / ROLLING_AVG_WINDOW
-            rolling_avg_winrate.append(round(avg_winrate, 2))
+            point["roll_avg_wr"] = avg_winrate
         else:
-            rolling_avg_winrate.append(None)
-        x_vals.append(point["x"])
-
-    return x_vals, rolling_avg_winrate
+            point["roll_avg_wr"] = None
 
 
 def on_key(event, ax2):
@@ -278,13 +268,13 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     plt.grid(which="minor", linestyle="-", linewidth="0.35", color="black")
 
     # Calculate the rolling averages
-    x_vals, rolling_avg_diff = rolling_avg_lpdiff(points)
+    insert_roll_avg_lpdiff(points)
+    insert_roll_avg_wr(points)
 
     crosshair = cursor.Cursor(
         ax,
         line,
         points,
-        rolling_avg_diff,
         lambda y: data.value_to_rank(y, None, thresholds, short=True, show_lp=True),
     )
     fig.canvas.mpl_connect("motion_notify_event", crosshair.on_mouse_move)
@@ -303,16 +293,19 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
         peak["x"],
     )
 
+    rolling_avg_diff = [point["roll_avg_lpdiff"] for point in points]
+
     # Create secondary y-axis for the rolling average difference
     ax2 = ax.twinx()
-    ax2.plot(x_vals, rolling_avg_diff, "black", linewidth=0.5)
+    ax2.plot(x_values, rolling_avg_diff, "black", linewidth=0.5)
     ax2.set_ylabel("Rolling Average LP Difference", color="white")
     ax2.tick_params(axis="y", labelcolor="white")
     ax2.axhline(y=0, color="black", linewidth=2)
 
+    OFFSET = 1 # Offset for the y-axis limits
     filtered_diff = [val for val in rolling_avg_diff if val is not None]
     max_diff = max(abs(min(filtered_diff)), max(filtered_diff)) if filtered_diff else 0
-    ax2.set_ylim(-max_diff, max_diff)
+    ax2.set_ylim(-max_diff - OFFSET, max_diff + OFFSET)
     fig.canvas.mpl_connect("key_press_event", lambda event: on_key(event, ax2))
 
     # Set the title and x-axis label
