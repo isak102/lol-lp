@@ -201,6 +201,8 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]
 
+    plt.rcParams["keymap.yscale"].remove("l")
+
     fig, ax = plt.subplots(constrained_layout=True)
     (line,) = ax.plot(x_values, y_values, color="#E8E8E8", linewidth=0.7)
     ax.set_facecolor("#343541")
@@ -281,6 +283,10 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     ax2.set_ylabel("Rolling Average LP Difference", color="white")
     ax2.tick_params(axis="y", labelcolor="white")
     ax2.axhline(y=0, color="black", linewidth=2)
+
+    filtered_diff = [val for val in rolling_avg_diff if val is not None]
+    max_diff = max(abs(min(filtered_diff)), max(filtered_diff)) if filtered_diff else 0
+    ax2.set_ylim(-max_diff, max_diff)
     fig.canvas.mpl_connect("key_press_event", lambda event: on_key(event, ax2))
 
     # Set the title and x-axis label
