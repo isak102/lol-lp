@@ -14,8 +14,11 @@ parser.add_argument(
 )
 parser.add_argument("-i", "--riot-id", help="Riot ID of the player")
 parser.add_argument("-r", "--region", help="Region of the player")
+parser.add_argument("-n", "--notify", action="store_true", help="Enable notifications")
 
 args = parser.parse_args()
+
+notify = args.notify or args.select
 
 if args.select:
     import src.select_player as select_player
@@ -36,16 +39,16 @@ try:
     import src.api as api
     import src.data_processing as data_processing
 
-    if args.select:
+    if notify:
         util.notif(f"Fetching pages for {args.riot_id}...")
     pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
 
     if len(pages) == 0:
-        if args.select:
+        if notify:
             util.notif(f"No data found.", 5000)
         exit(0)
 
-    if args.select:
+    if notify:
         util.notif(f"Merging thresholds...")
     thresholds = data_processing.merge_thresholds(
         [page["thresholds"] for page in pages], args.region.upper()
@@ -54,11 +57,11 @@ try:
 except Exception as e:
     error_msg = "Error getting data"
     print(f"{error_msg}: {e}")
-    if args.select:
+    if notify:
         util.notif(f"❌ {error_msg}", 5000)
     exit(1)
 
-if args.select:
+if notify:
     sleep(0.01)  # without this the notif sometimes gets stuck
     util.notif("Done", 1)
 
