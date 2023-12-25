@@ -3,6 +3,7 @@ import subprocess
 import urllib.parse as urllib
 
 import src.config as config
+from src.util import transform_riot_id
 
 __all__ = ["select_player"]
 
@@ -61,12 +62,6 @@ def parse_url(url: str) -> tuple[str, str]:
             riot_id = parts[-1]
 
     return (transform_riot_id(riot_id, region), region.upper())
-
-
-def transform_riot_id(riot_id: str, region: str) -> str:
-    # TODO: append default tagline ?
-    decoded = urllib.unquote(riot_id.replace("-", "#").replace("+", " "))
-    return decoded
 
 
 def select_player() -> tuple[str, str]:

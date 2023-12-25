@@ -1,6 +1,3 @@
-import subprocess
-
-
 def is_apex(tier: str) -> bool:
     return tier in ["MASTER", "GRANDMASTER", "CHALLENGER"]
 
@@ -10,6 +7,8 @@ def short_tier(tier: str) -> str:
 
 
 def notif(message: str, duration: int = 999999999):
+    import subprocess
+
     ID = "938104"
     subprocess.Popen(
         [
@@ -26,3 +25,11 @@ def notif(message: str, duration: int = 999999999):
             ID,
         ]
     )
+
+
+def transform_riot_id(riot_id: str, region: str) -> str:
+    import urllib.parse as urllib
+
+    # TODO: append default tagline ?
+    decoded = urllib.unquote(riot_id.replace("-", "#").replace("+", " "))
+    return decoded

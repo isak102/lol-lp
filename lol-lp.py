@@ -39,6 +39,9 @@ try:
     import src.api as api
     import src.data_processing as data_processing
 
+    if not args.select:
+        args.riot_id = util.transform_riot_id(args.riot_id, args.region)
+
     if notify:
         util.notif(f"Fetching pages for {args.riot_id}...")
     pages = asyncio.run(api.get_lphistory(args.riot_id, args.region.upper()))
