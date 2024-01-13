@@ -317,8 +317,10 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     ax2.set_ylim(-max_diff - OFFSET, max_diff + OFFSET)
 
     window_size = 3  # Adjust this as needed
-    smoothed_r_avg_wr = np.convolve(
-        r_avg_wr, np.ones(window_size) / window_size, mode="valid"
+    smoothed_r_avg_wr = (
+        np.convolve(r_avg_wr, np.ones(window_size) / window_size, mode="valid")
+        if len(r_avg_wr) > 0
+        else r_avg_wr
     )
     adjusted_x_values = x_values[len(x_values) - len(smoothed_r_avg_wr) :]
 
