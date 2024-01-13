@@ -54,8 +54,9 @@ def merge_thresholds(all_tresholds: list[list[dict]], region: str) -> list[dict]
 
     set_apex_cutoffs(thresholds, region)
 
-    highest = max(thresholds[::-1], key=lambda x: (x["maxValue"]))
-    highest["maxValue"] = maxsize
+    if len(thresholds) > 0:
+        highest = max(thresholds[::-1], key=lambda x: (x["maxValue"]))
+        highest["maxValue"] = maxsize
 
     return thresholds
 
