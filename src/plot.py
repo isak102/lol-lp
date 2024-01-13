@@ -210,10 +210,20 @@ def on_key(event, r_avg_lpdiff, r_avg_wr):
         plt.draw()
 
 
-def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[dict]):
+def plot(
+    summoner_name: str, region: str, pages: list[dict], thresholds: list[dict]
+) -> str:
+    """
+    Plots the data. Returns a message to display after plotting.
+    """
     logger.info("Extracting points...")
     points = extract_points(pages)
     logger.info(f"Found {len(points)} points")
+
+    if len(points) == 0:
+        msg = "No games found."
+        logger.info(msg)
+        return msg
 
     logger.info("Filling in x values...")
     for i, point in enumerate(reversed(points)):
@@ -346,3 +356,5 @@ def plot(summoner_name: str, region: str, pages: list[dict], thresholds: list[di
     ax.set_title(title, color="white")
 
     plt.show()
+
+    return ""

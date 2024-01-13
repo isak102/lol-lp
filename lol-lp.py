@@ -70,4 +70,7 @@ if notify:
 
 import src.plot as plot
 
-plot.plot(args.riot_id, args.region.upper(), pages, thresholds)
+str = plot.plot(args.riot_id, args.region.upper(), pages, thresholds)
+if str != "":
+    if notify:
+        util.notif(str, 5000)
