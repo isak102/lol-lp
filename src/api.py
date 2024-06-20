@@ -38,18 +38,21 @@ async def async_get_page(
         "x-moba-proxy-gql-ops-name": "LolProfilePageLpGainsQuery",
     }
 
+    game_name, tag_line = summoner_name.split("#")
+
     json_data = {
         "operationName": "LolProfilePageLpGainsQuery",
         "variables": {
             "cLpPerPage": 150,
             "cLpPageIndex": page_index,
-            "summonerName": summoner_name,
+            "gameName": game_name,
+            "tagLine": tag_line,
             "region": region,
         },
         "extensions": {
             "persistedQuery": {
                 "version": 1,
-                "sha256Hash": "75a0cdde5122fb16124634512f4cdc44551272d7e82ab827818c3b37bd72e97b",
+                "sha256Hash": "bade8e2e917de67ec76c0e30e82d2bc38c40fa0af1ed61a7dbe0a795cd49857f",
             },
         },
     }
@@ -134,6 +137,7 @@ async def get_lphistory(
 def get_apex_cutoffs(
     region: str,
 ) -> dict[str, int]:  # TODO: handle the case where no cutoffs exist
+    # TODO: only fetch cutoffs once per day
     """
     Returns a dictionary mapping each apex tier to its cutoff value. Gets the cutoffs from
     deeplol.gg. Will throw an exception if the request fails.
